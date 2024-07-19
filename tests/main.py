@@ -1,7 +1,6 @@
 import asyncio
-import json
 
-from payarc import Payarc
+from src.payarc.payarc import Payarc
 
 PORT = 2999
 PAYARC_ENV = 'http://localapi6.payarc.net'
