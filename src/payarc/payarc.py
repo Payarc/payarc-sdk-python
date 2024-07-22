@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import httpx
@@ -22,10 +23,10 @@ class Payarc:
             'create_refund': self.__refund_charge
         }
         self.customers = {
-            'create': self.create_customer,
-            'retrieve': self.retrieve_customer,
+            'create': self.__create_customer,
+            'retrieve': self.__retrieve_customer,
             'list': self.list_customer,
-            'update': self.update_customer,
+            'update': self.__update_customer,
         }
         self.applicants = {
             'create': self.add_lead,
@@ -212,57 +213,83 @@ class Payarc:
                 response.raise_for_status()
 
         except httpx.HTTPError as error:
-            return self.manage_error({'source': 'API Refund ACH Charge'},
-                                     error.response if error.response else {})
+            raise Exception(self.manage_error({'source': 'API Refund ACH Charge'},
+                                              error.response if error.response else {}))
         except Exception as error:
-            return self.manage_error({'source': 'API Refund ACH Charge'}, str(error))
+            raise Exception(self.manage_error({'source': 'API Refund ACH Charge'}, str(error)))
         else:
             return self.add_object_id(response.json().get('data'))
 
-    async def create_customer(self, customer_data=None):
-        customer_data = customer_data or {}
+    async def __create_customer(self, customer_data=None):
+        if customer_data is None:
+            customer_data = {}
+
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"{self.base_url}customers", json=customer_data,
-                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
-            customer = self.add_object_id(response.json()['data'])
-            if 'cards' in customer_data and customer_data['cards']:
-                card_tokens = await asyncio.gather(
-                    *[self.gen_token_for_card(card_data) for card_data in customer_data['cards']])
-                attached_cards = await asyncio.gather(
-                    *[self.update_customer(customer['customer_id'], {'token_id': token['id']}) for token in
-                      card_tokens])
-                return await self.retrieve_customer(customer['object_id'])
-            return customer
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API Create customers'}, error.response)
-        except Exception as error:
-            return self.manage_error({'source': 'API Create customers'}, str(error))
+                response = await client.post(
+                    f"{self.base_url}customers",
+                    json=customer_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+                customer = self.add_object_id(response.json()['data'])
 
-    async def retrieve_customer(self, customer_id):
+                if 'cards' in customer_data and customer_data['cards']:
+                    card_token_promises = [self.__gen_token_for_card(card_data) for card_data in customer_data['cards']]
+                    card_tokens = await asyncio.gather(*card_token_promises)
+
+                    if card_tokens:
+                        attached_cards_promises = [
+                            self.__update_customer(customer['customer_id'], {'token_id': token['id']})
+                            for token in card_tokens
+                        ]
+                        await asyncio.gather(*attached_cards_promises)
+                        return await self.__retrieve_customer(customer['object_id'])
+
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Create customers'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create customers'}, str(error)))
+        else:
+            return customer
+
+    async def __retrieve_customer(self, customer_id):
         if customer_id.startswith('cus_'):
             customer_id = customer_id[4:]
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.base_url}customers/{customer_id}",
-                                            headers={'Authorization': f"Bearer {self.bearer_token}"})
-            return self.add_object_id(response.json()['data'])
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API retrieve customer info'}, error.response)
+                response = await client.get(
+                    f"{self.base_url}customers/{customer_id}",
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error({'source': 'API retrieve customer info'}, error.response if error.response else {}))
         except Exception as error:
-            return self.manage_error({'source': 'API retrieve customer info'}, str(error))
+            raise Exception(self.manage_error({'source': 'API retrieve customer info'}, str(error)))
+        else:
+            return self.add_object_id(response.json()['data'])
 
-    async def gen_token_for_card(self, token_data=None):
-        token_data = token_data or {}
+    async def __gen_token_for_card(self, token_data=None):
+        if token_data is None:
+            token_data = {}
+
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"{self.base_url}tokens", json=token_data,
-                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
-            return response.json()['data']
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API for tokens'}, error.response)
+                response = await client.post(
+                    f"{self.base_url}tokens",
+                    json=token_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API for tokens'}, error.respons if error.response else {}))
         except Exception as error:
-            return self.manage_error({'source': 'API for tokens'}, str(error))
+            raise Exception(self.manage_error({'source': 'API for tokens'}, str(error)))
+        else:
+            return response.json()['data']
 
     async def add_card_to_customer(self, customer_id, card_data):
         try:
@@ -270,8 +297,8 @@ class Payarc:
                 customer_id = customer_id.get('object_id', customer_id)
             if customer_id.startswith('cus_'):
                 customer_id = customer_id[4:]
-            card_token = await self.gen_token_for_card(card_data)
-            attached_cards = await self.update_customer(customer_id, {'token_id': card_token['id']})
+            card_token = await self.__gen_token_for_card(card_data)
+            attached_cards = await self.__update_customer(customer_id, {'token_id': card_token['id']})
             return self.add_object_id(card_token['card']['data'])
         except httpx.HTTPStatusError as error:
             return self.manage_error({'source': 'API add card to customer'}, error.response)
@@ -297,19 +324,26 @@ class Payarc:
         except Exception as error:
             return self.manage_error({'source': 'API List customers'}, str(error))
 
-    async def update_customer(self, customer_id, customer_data=None):
-        customer_data = customer_data or {}
-        if customer_id.startswith('cus_'):
-            customer_id = customer_id[4:]
+    async def __update_customer(self, customer, cust_data):
+        if 'object_id' in customer:
+            customer = customer['object_id']
+        if customer.startswith('cus_'):
+            customer = customer[4:]
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.put(f"{self.base_url}customers/{customer_id}", json=customer_data,
-                                            headers={'Authorization': f"Bearer {self.bearer_token}"})
-            return self.add_object_id(response.json()['data'])
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API update customer info'}, error.response)
+                response = await client.patch(
+                    f"{self.base_url}customers/{customer}",
+                    json=cust_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
         except Exception as error:
-            return self.manage_error({'source': 'API update customer info'}, str(error))
+            raise Exception(self.manage_error({'source': 'API update customer info'}, str(error)))
+        else:
+            return self.add_object_id(response.json()['data'])
 
     async def add_lead(self, lead_data=None):
         lead_data = lead_data or {}
