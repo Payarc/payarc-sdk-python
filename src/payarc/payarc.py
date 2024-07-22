@@ -1,6 +1,7 @@
 import json
 
 import httpx
+from functools import partial
 
 
 class Payarc:
@@ -14,12 +15,12 @@ class Payarc:
         self.base_url = f"{self.base_url}{api_version}" if api_version == '/v1/' else f"{self.base_url}/v{api_version}/"
         self.bearer_token_agent = bearer_token_agent
 
-        self.charges = Charges(
-            create=self.__create_charge,
-            retrieve=self.__get_charge,
-            list_charges=self.__list_charge,
-            create_refund=self.__refund_charge
-        )
+        self.charges = {
+            'create': self.__create_charge,
+            'retrieve': self.__get_charge,
+            'list': self.__list_charge,
+            'create_refund': self.__refund_charge
+        }
         self.customers = {
             'create': self.create_customer,
             'retrieve': self.retrieve_customer,
@@ -151,6 +152,73 @@ class Payarc:
         else:
             return {'charges': charges, 'pagination': pagination}
 
+    async def __refund_charge(self, charge, params=None):
+        if isinstance(charge, dict):
+            charge_id = charge.get('object_id', charge)
+        else:
+            charge_id = charge
+
+        if charge_id.startswith('ch_'):
+            charge_id = charge_id[3:]
+
+        if charge_id.startswith('ach_'):
+            result = await self.__refund_ach_charge(charge, params)
+            return result
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}charges/{charge_id}/refunds",
+                    json=params,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+            response.raise_for_status()
+
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error({'source': 'API Refund a charge'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API List charges'}, str(error)))
+        else:
+            return self.add_object_id(response.json().get('data'))
+
+    async def __refund_ach_charge(self, charge, params=None):
+        if params is None:
+            params = {}
+
+        if isinstance(charge, dict):
+            # charge is already an object
+            pass
+        else:
+            charge = await self.__get_charge(charge)  # charge will become an object
+
+        params['type'] = 'credit'
+        params['amount'] = params.get('amount', charge.get('amount'))
+        params['sec_code'] = params.get('sec_code', charge.get('sec_code'))
+
+        if charge.get('bank_account') and charge['bank_account'].get('data') and charge['bank_account']['data'].get(
+                'object_id'):
+            params['bank_account_id'] = params.get('bank_account_id', charge['bank_account']['data']['object_id'])
+
+        if 'bank_account_id' in params and params['bank_account_id'].startswith('bnk_'):
+            params['bank_account_id'] = params['bank_account_id'][4:]
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}achcharges",
+                    json=params,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+
+        except httpx.HTTPError as error:
+            return self.manage_error({'source': 'API Refund ACH Charge'},
+                                     error.response if error.response else {})
+        except Exception as error:
+            return self.manage_error({'source': 'API Refund ACH Charge'}, str(error))
+        else:
+            return self.add_object_id(response.json().get('data'))
+
     async def create_customer(self, customer_data=None):
         customer_data = customer_data or {}
         try:
@@ -242,18 +310,6 @@ class Payarc:
             return self.manage_error({'source': 'API update customer info'}, error.response)
         except Exception as error:
             return self.manage_error({'source': 'API update customer info'}, str(error))
-
-    async def __refund_charge(self, charge_id, refund_data=None):
-        refund_data = refund_data or {}
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(f"{self.base_url}charges/{charge_id}/refund", json=refund_data,
-                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
-            return self.add_object_id(response.json()['data'])
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API refund charge'}, error.response)
-        except Exception as error:
-            return self.manage_error({'source': 'API refund charge'}, str(error))
 
     async def add_lead(self, lead_data=None):
         lead_data = lead_data or {}
@@ -358,15 +414,15 @@ class Payarc:
             if 'id' in obj or 'customer_id' in obj:
                 if obj['object'] == 'Charge':
                     obj['object_id'] = f"ch_{obj['id']}"
-                    obj['createRefund'] = lambda: self.__refund_charge(obj)
+                    obj['create_refund'] = partial(self.__refund_charge, obj)
                 elif obj['object'] == 'customer':
                     obj['object_id'] = f"cus_{obj['customer_id']}"
-                    obj['update'] = lambda: self.update_customer(obj)
+                    obj['update'] = self.update_customer
                     obj['cards'] = {}
-                    obj['cards']['create'] = lambda: self.add_card_to_customer(obj)
+                    obj['cards']['create'] = self.add_card_to_customer
                     if 'bank_accounts' not in obj:
                         obj['bank_accounts'] = {}
-                    obj['bank_accounts']['create'] = lambda: self.add_bank_acc_to_customer(obj)
+                    obj['bank_accounts']['create'] = self.add_bank_acc_to_customer
                     if 'charges' not in obj:
                         obj['charges'] = {}
                     obj['charges']['create'] = lambda: self.__create_charge(obj)
@@ -443,11 +499,3 @@ class Payarc:
             'errorDataMessage': error_json.get('data', {}).get('message', 'unKnown')
         })
         return seed
-
-
-class Charges:
-    def __init__(self, create, retrieve, list_charges, create_refund):
-        self.create = create
-        self.retrieve = retrieve
-        self.list = list_charges
-        self.create_refund = create_refund
