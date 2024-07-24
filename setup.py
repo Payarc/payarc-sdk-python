@@ -34,4 +34,5 @@ setup(
     ],
     package_dir={"": "src"},
     python_requires=">=3.7, <4",
+    install_requires=['httpx', 'asyncio'],
 )

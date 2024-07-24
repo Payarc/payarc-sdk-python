@@ -285,25 +285,49 @@ class Payarc:
                 )
                 response.raise_for_status()
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API for tokens'}, error.respons if error.response else {}))
+            raise Exception(self.manage_error({'source': 'API for tokens'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API for tokens'}, str(error)))
         else:
             return response.json()['data']
 
-    async def add_card_to_customer(self, customer_id, card_data):
+    async def __add_card_to_customer(self, customer_id, card_data):
         try:
-            if isinstance(customer_id, dict):
-                customer_id = customer_id.get('object_id', customer_id)
+            customer_id = customer_id.get('object_id', customer_id)
             if customer_id.startswith('cus_'):
                 customer_id = customer_id[4:]
+
             card_token = await self.__gen_token_for_card(card_data)
             attached_cards = await self.__update_customer(customer_id, {'token_id': card_token['id']})
-            return self.add_object_id(card_token['card']['data'])
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API add card to customer'}, error.response)
+        except httpx.HTTPError as error:
+            return self.manage_error({'source': 'API add card to customer'}, error.response if error.response else {})
         except Exception as error:
             return self.manage_error({'source': 'API add card to customer'}, str(error))
+        else:
+            return self.add_object_id(card_token['card']['data'])
+
+    async def __add_bank_acc_to_customer(self, customer_id, acc_data):
+        try:
+            customer_id = customer_id.get('object_id', customer_id)
+            if customer_id.startswith('cus_'):
+                customer_id = customer_id[4:]
+
+            acc_data['customer_id'] = customer_id
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}bankaccounts",
+                    json=acc_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+
+        except httpx.HTTPError as error:
+            return self.manage_error({'source': 'API BankAccount to customer'}, error.response if error.response else {})
+        except Exception as error:
+            return self.manage_error({'source': 'API BankAccount to customer'}, str(error))
+        else:
+            return self.add_object_id(response.json()['data'])
 
     async def list_customer(self, search_data=None):
         search_data = search_data or {}
@@ -451,15 +475,15 @@ class Payarc:
                     obj['create_refund'] = partial(self.__refund_charge, obj)
                 elif obj['object'] == 'customer':
                     obj['object_id'] = f"cus_{obj['customer_id']}"
-                    obj['update'] = self.update_customer
+                    obj['update'] = partial(self.__update_customer, obj)
                     obj['cards'] = {}
-                    obj['cards']['create'] = self.add_card_to_customer
+                    obj['cards']['create'] = partial(self.__add_card_to_customer, obj)
                     if 'bank_accounts' not in obj:
                         obj['bank_accounts'] = {}
-                    obj['bank_accounts']['create'] = self.add_bank_acc_to_customer
+                    obj['bank_accounts']['create'] = partial(self.__add_bank_acc_to_customer, obj)
                     if 'charges' not in obj:
                         obj['charges'] = {}
-                    obj['charges']['create'] = lambda: self.__create_charge(obj)
+                    obj['charges']['create'] = partial(self.__create_charge, obj)
                 elif obj['object'] == 'Token':
                     obj['object_id'] = f"tok_{obj['id']}"
                 elif obj['object'] == 'Card':
@@ -468,7 +492,7 @@ class Payarc:
                     obj['object_id'] = f"bnk_{obj['id']}"
                 elif obj['object'] == 'ACHCharge':
                     obj['object_id'] = f"ach_{obj['id']}"
-                    obj['createRefund'] = lambda: self.__refund_charge(obj)
+                    obj['createRefund'] = partial(self.__refund_ach_charge, obj)
                 elif obj['object'] == 'ApplyApp':
                     obj['object_id'] = f"appl_{obj['id']}"
                     obj['retrieve'] = lambda: self.retrieve_applicant(obj)
@@ -504,10 +528,10 @@ class Payarc:
                 obj['object_id'] = obj['plan_id']
                 obj['object'] = 'Plan'
                 del obj['plan_id']
-                obj['retrieve'] = lambda: self.get_plan(obj)
-                obj['update'] = lambda: self.update_plan(obj)
-                obj['delete'] = lambda: self.delete_plan(obj)
-                obj['createSubscription'] = lambda: self.create_subscription(obj)
+                obj['retrieve'] = partial(self.retrieve_plan, obj)
+                obj['update'] = partial(self.update_plan, obj)
+                obj['delete'] = partial(self.delete_plan, obj)
+                obj['createSubscription'] = partial(self.create_subscription, obj)
 
             for key in obj:
                 if isinstance(obj[key], dict):
@@ -522,14 +546,29 @@ class Payarc:
 
     def manage_error(self, seed=None, error=None):
         seed = seed or {}
-        error_json = error.json() if hasattr(error, 'json') else error
+
+        # Determine the error_json
+        if hasattr(error, 'json'):
+            try:
+                error_json = error.json()
+            except ValueError:
+                error_json = {}
+        elif isinstance(error, dict):
+            error_json = error
+        else:
+            error_json = {}
+
+        # Update seed with error details
         seed.update({
             'object': f"Error {self.version}",
             'type': 'TODO put here error type',
-            'errorMessage': error_json.get('message', error if isinstance(error, str) else 'unKnown'),
+            'errorMessage': error_json.get('message', error) if isinstance(error, str) else error_json.get('message',
+                                                                                                           'unKnown'),
             'errorCode': getattr(error, 'status_code', 'unKnown'),
             'errorList': error_json.get('errors', 'unKnown'),
             'errorException': error_json.get('exception', 'unKnown'),
             'errorDataMessage': error_json.get('data', {}).get('message', 'unKnown')
         })
+
         return seed
+
