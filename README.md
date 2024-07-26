@@ -136,7 +136,7 @@ if __name__ == "__main__":
 To create a payment(charge) from a customer, minimum information required is:
 - `amount` converted in cents,
 - `currency` equal to 'usd',
-- `source` an object that has attribute `token_id`. this can be obtained by the API for token creation.
+- `source` an object that has attribute `token_id`. this can be obtained by the [CREATE TOKEN API](https://docs.payarc.net/#ee16415a-8d0c-4a71-a5fe-48257ca410d7) for token creation.
 This example shows how to create a charge using a token:
 
 ```python
