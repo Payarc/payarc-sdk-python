@@ -13,3 +13,6 @@ __pycache__/
 .cache
 .coverage
 .idea
+.env
+.pypirc
+index.js
