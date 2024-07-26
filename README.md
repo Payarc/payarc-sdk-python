@@ -245,3 +245,180 @@ async def create_ach_charge_by_bank_account_details():
 
 asyncio.run(create_ach_charge_by_bank_account_details())
 ```
+
+
+## Listing Charges
+
+### Example: List Charges with No Constraints
+
+This example demonstrates how to list all charges without any constraints:
+
+```python
+async def list_charges(options=None):
+    try:
+        charges = await payarc.charges['list'](options)
+        print(charges)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(list_charges({}))
+```
+
+## Retrieving a Charge
+
+### Example: Retrieve a Charge
+
+This example shows how to retrieve a specific charge by its ID:
+
+```python
+async def get_charge_by_id(id):
+    try:
+        charge = await payarc.charges['retrieve'](id)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(get_charge_by_id('ch_nbDB*******RnMORX'))
+```
+
+### Example: Retrieve a ACH Charge
+
+his example shows how to retrieve a specific ACH charge by its ID:
+
+```python
+async def get_charge_by_id(id):
+    try:
+        charge = await payarc.charges['retrieve'](id)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(get_charge_by_id('ach_DB*******RnTYY'))
+```
+
+## Refunding a Charge
+
+### Example: Refund a Charge
+
+This example demonstrates how to refund a charge:
+
+```python
+async def refund_charge_by_obj(id, options=None):
+    try:
+        charge = await payarc.charges['retrieve'](id)
+        refund = await charge['create_refund'](options)
+        print('Success, the refund is:', refund)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(refund_charge_by_obj('ch_M*********noOWL', {
+                                      'reason': 'requested_by_customer',
+                                      'description': 'The customer returned the product'
+                                      }
+                                 ))
+```
+
+Alternatively, you can refund a charge using the `create_refund` method on the Payarc instance:
+```python
+async def refund_charge(id, options=None):
+    try:
+        refund = await payarc.charges['create_refund'](id, options)
+        print('Success, the refund is:', refund)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(refund_charge('ch_M*******noOWL'))
+
+```
+
+### Example: Refund an ACH Charge
+
+This example demonstrates how to refund an ACH charge with charge object:
+
+```python
+async def refund_ach_charge_by_obj(id, options=None):
+    try:
+        charge = await payarc.charges['retrieve'](id)
+        refund = await charge['create_refund'](options)
+        print('Success, the refund is:', refund)
+    except Exception as error:
+        print('Error detected:', error)
+ asyncio.run(refund_ach_charge_by_obj('ach_g9dDE7GDdeDG08eA', {}))
+```
+This example demonstrates how to refund an ACH charge with charge identifier:
+
+```python
+async def refund_charge(id, options=None):
+    try:
+        refund = await payarc.charges['create_refund'](id, options)
+        print('Success, the refund is:', refund)
+    except Exception as error:
+        print('Error detected:', error)
+        
+ asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
+```
+
+## Managing Customers
+
+### Example: Create a Customer with Credit Card Information
+This example shows how to create a new customer with credit card information:
+
+```python
+async def create_customer_example():
+    customer_data = {
+        "email": "anon+50@example.com",
+        "cards": [
+            {
+                "card_source": "INTERNET",
+                "card_number": "4012000098765439",
+                "exp_month": "04",
+                "exp_year": "2025",
+                "cvv": "997",
+                "card_holder_name": "John Doe",
+                "address_line1": "123 Main Street",
+                "city": "Greenwich",
+                "state": "CT",
+                "zip": "06830",
+                "country": "US",
+            },
+            {
+                "card_source": "INTERNET",
+                "card_number": "4012000098765439",
+                "exp_month": "11",
+                "exp_year": "2025",
+                "cvv": "998",
+                "card_holder_name": "John Doe",
+                "address_line1": "123 Main Street Apt 3",
+                "city": "Greenwich",
+                "state": "CT",
+                "zip": "06830",
+                "country": "US",
+            }
+        ]
+    }
+    try:
+        customer = await payarc.customers['create'](customer_data)
+        print('Customer created:', customer)
+    except Exception as error:
+        print('Error detected:', error)
+        
+ asyncio.run(create_customer_example())
+```
+
+### Example: Update a Customer
+
+This example demonstrates how to update an existing customer's information when only ID is known:
+
+```python
+async def update_customer(id):
+    try:
+        updated_customer = await payarc.customers['update'](id, {
+            "name": 'John Doe II',
+            "description": 'Example customer',
+            "phone": '1234567890'
+        })
+        print('Customer updated successfully:', updated_customer)
+    except Exception as error:
+        print('Error detected:', error)
+
+ asyncio.run(update_customer('cus_DPNMVjx4AMNNVnjA'))
+```

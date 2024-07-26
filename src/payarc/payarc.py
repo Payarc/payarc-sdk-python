@@ -154,6 +154,7 @@ class Payarc:
             return {'charges': charges, 'pagination': pagination}
 
     async def __refund_charge(self, charge, params=None):
+        ach_regular = False
         if isinstance(charge, dict):
             charge_id = charge.get('object_id', charge)
         else:
@@ -163,8 +164,9 @@ class Payarc:
             charge_id = charge_id[3:]
 
         if charge_id.startswith('ach_'):
-            result = await self.__refund_ach_charge(charge, params)
-            return result
+            ach_regular = True
+            response = await self.__refund_ach_charge(charge, params)
+            response.raise_for_status()
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -180,7 +182,7 @@ class Payarc:
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API List charges'}, str(error)))
         else:
-            return self.add_object_id(response.json().get('data'))
+            return self.add_object_id(response.json().get('data')) if not ach_regular else response
 
     async def __refund_ach_charge(self, charge, params=None):
         if params is None:
