@@ -2,6 +2,7 @@ import asyncio
 from src.payarc.payarc import Payarc
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 
 payarc = Payarc(
@@ -23,6 +24,52 @@ async def create_charge_example():
         }
     }
 
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def create_charge_by_card_id():
+    charge_data = {
+        "amount": 3785,
+        "currency": "usd",
+        "source": {
+            "card_id": "card_Ly9v09NN2P59M0m1",
+            "customer_id": "cus_jMNKVMPKnNxPVnDp"
+        }
+    }
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def create_charge_by_token():
+    charge_data = {
+        "amount": 3785,
+        "currency": "usd",
+        "source": {
+            "token_id": "tok_mEL8xxxxLqLL8wYl"
+        }
+    }
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def create_charge_by_customer_id():
+    charge_data = {
+        "amount": 3785,
+        "currency": "usd",
+        "source": {
+            "customer_id": "cus_jMNKVMPKnNxPVnDp"
+        }
+    }
     try:
         charge = await payarc.charges['create'](charge_data)
         print('Success, the charge is:', charge)
@@ -123,6 +170,41 @@ async def get_customer_by_id(id):
     except Exception as error:
         print('Error detected:', error)
 
+
+async def create_ach_charge_by_bank_account():
+    try:
+        customer = await payarc.customers['retrieve']('cus_jMNKVMPKnNxPVnDp')
+        charge = await customer['charges']['create']({
+            'amount': 6699,
+            'sec_code': 'WEB',
+            'source': {
+                'bank_account_id': 'bnk_eJjbbbbbblL'
+            }
+        })
+        print('Charge created successfully:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def create_ach_charge_by_bank_account_details():
+    try:
+        customer = await payarc.customers['retrieve']('cus_jMNKVMPKnNxPVnDp')
+        charge = await customer['charges']['create']({
+            'amount': 6699,
+            'sec_code': 'WEB',
+            'source': {
+                'account_number': '123432575352',
+                'routing_number': '123345349',
+                'first_name': 'FirstName III',
+                'last_name': 'LastName III',
+                'account_type': 'Personal Savings',
+            }
+        })
+        print('Charge created successfully:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 # Run the example
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
@@ -133,4 +215,9 @@ if __name__ == "__main__":
     #                                  {'reason': 'requested_by_customer',
     #                                   'description': 'The customer returned the product, did not like it'}))
     # asyncio.run(create_customer_example())
-    asyncio.run(get_customer_by_id('cus_jMNKVMPKnNxPVnDp'))
+    # asyncio.run(get_customer_by_id('cus_jMNKVMPKnNxPVnDp'))
+    # asyncio.run(create_charge_by_card_id())
+    asyncio.run(create_charge_by_token())
+    # asyncio.run(create_charge_by_customer_id())
+    # asyncio.run(create_charge_by_bank_account())
+    # asyncio.run(create_ach_charge_by_bank_account_details())

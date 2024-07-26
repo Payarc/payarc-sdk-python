@@ -132,3 +132,116 @@ async def create_charge_example():
 if __name__ == "__main__":
     asyncio.run(create_charge_example())
 ```
+### Example: Create a Charge by Token
+To create a payment(charge) from a customer, minimum information required is:
+- `amount` converted in cents,
+- `currency` equal to 'usd',
+- `source` an object that has attribute `token_id`. this can be obtained by the API for token creation.
+This example shows how to create a charge using a token:
+
+```python
+async def create_charge_by_token():
+    charge_data = {
+        "amount": 3785,
+        "currency": "usd",
+        "source": {
+            "token_id": "tok_mEL8xxxxLqLL8wYl"
+        }
+    }
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+```
+
+### Example: Create a Charge by Card ID
+
+Charge can be generated over specific credit card (cc) if you know the cc's ID and customer's ID to which this card belongs.
+This example demonstrates how to create a charge using a card ID:
+
+```python
+async def create_charge_by_card_id():
+    charge_data = {
+        "amount": 3785,
+        "currency": "usd",
+        "source": {
+            "card_id": "card_Ly9tetrt59M0m1",
+            "customer_id": "cus_jMNetettyynDp"
+        }
+    }
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+ asyncio.run(create_charge_by_card_id())
+```
+### Example: Create a Charge by Customer ID
+
+This example shows how to create a charge using a customer ID:
+
+```python
+async def create_charge_by_customer_id():
+    charge_data = {
+        "amount": 5785,
+        "currency": "usd",
+        "source": {
+            "customer_id": "cus_jMNetettyynDp"
+        }
+    }
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+ asyncio.run(create_charge_by_customer_id())
+```
+
+### Example: Create a Charge by Bank account ID
+
+This example shows how to create an ACH charge when you know the bank account 
+
+```python
+async def create_charge_by_bank_account():
+    try:
+        customer = await payarc.customers['retrieve']('cus_jMNKVMPKnNxPVnDp')
+        charge = await customer['charges']['create']({
+            'amount':6699,
+            'sec_code': 'WEB',
+            'source': {
+                'bank_account_id': 'bnk_eJjbbbbbblL'
+            }
+        })
+        print('Charge created successfully:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(create_charge_by_bank_account())
+```
+
+Example make ACH charge with new bank account. Details for bank account are send in attribute source
+
+```python
+async def create_ach_charge_by_bank_account_details():
+    try:
+        customer = await payarc.customers['retrieve']('cus_jMNKVMPKnNxPVnDp')
+        charge = await customer['charges']['create']({
+            'amount': 6699,
+            'sec_code': 'WEB',
+            'source': {
+                 'account_number':'123432575352',
+                 'routing_number':'123345349',
+                 'first_name': 'FirstName III',
+                 'last_name':'LastName III',
+                 'account_type': 'Personal Savings',
+            }
+        })
+        print('Charge created successfully:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(create_ach_charge_by_bank_account_details())
+```
