@@ -3,16 +3,17 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-dynamic = ["version"]
 name = "payarc"
-version = "0.1.0"
+version = "1.0.0-aplha"
 dependencies=[
     "httpx",
     "asyncio",
 ]
 requires-python = ">=3.7"
-authors = ["Payarc"]
-license = "MIT"
+authors = [
+    {name="Spas Tomov", email="spas@payarc.com"},
+]
+license = {file = "LICENSE"}
 description = "Payarc Python SDK"
 readme = "README.md"
 classifiers=[
