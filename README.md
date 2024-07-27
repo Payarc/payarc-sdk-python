@@ -86,6 +86,15 @@ SDK is build around object payarc. From this object you can access properties an
     list - this function allows you to search amongst customers you had created. It is possible to search based on some criteria. See examples and documentation for more details  
     update - this function allows you to modify attributes of customer object.
 
+### Object `payarc.applications`
+##### Object `payarc.applications` is used by Agents and ISVs to manage candidate merchant when acquiring new customer. As such you can create, list, get details, and manage documents required in boarding process.  
+    create - this function add new candidate into database. See documentation for available attributes, possible values for some of them and which are mandatory. 
+    list - returns a list of application object representing future merchants. Use this function to find the interested identifier. 
+    retrieve - based on identifier or an object returned from list function, this function will return details 
+    delete - in case candidate merchant is no longer needed it will remove information for it.
+    addDocument - this function is adding base64 encoded document to existing candidate merchant. For different types of document required in the process contact Payarc. See examples how the function could be invoked
+    deleteDocument - this function removes document, when document is no longer valid.
+    submit - this function initialize the process of sing off contract between Payarc and your client
 First, initialize the Payarc SDK with your API key:
 
 ```python
@@ -420,5 +429,198 @@ async def update_customer(id):
     except Exception as error:
         print('Error detected:', error)
 
- asyncio.run(update_customer('cus_DPNMVjx4AMNNVnjA'))
+ asyncio.run(update_customer('cus_**********njA'))
 ```
+
+### Example: Update an Already Found Customer
+
+This example shows how to update a customer object:
+
+```python
+async def update_customer_by_obj(id):
+    try:
+        customer = await payarc.customers['retrieve'](id)
+        updated_customer = await customer['update']({
+            "description": 'Senior Example customer'
+        })
+        print('Customer updated successfully:', updated_customer)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(update_customer_by_obj('cus_DP*********njA'))
+```
+### Example: List Customers with a Limit
+
+This example demonstrates how to list customers with a specified limit:
+```python
+async def list_customer_with_limit(limit):
+    try:
+        data = await payarc.customers['list']({'limit': limit})
+        customers = data['customers']
+        pagination = data['pagination']
+        print(customers[0]['card']['data'])
+        print(pagination)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(list_customer_with_limit(3))
+```
+
+### Example: Add a New Card to a Customer
+
+This example shows how to add a new card to an existing customer:
+
+```python
+async def add_card_to_customer():
+    try:
+        customer = await payarc.customers['retrieve']('cus_j*********Dp')
+        card = await customer['cards']['create']({
+            'card_source': 'INTERNET',
+            'card_number': '5146315000000055',
+            'exp_month': '03',
+            'exp_year': '2025',
+            'cvv': '997',
+            'card_holder_name': 'John Doe',
+            'address_line1': '123 Main Street ap 5',
+            'city': 'Greenwich',
+            'state': 'CT',
+            'zip': '06830',
+            'country': 'US',
+        })
+        print('Card added successfully:', card)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(add_card_to_customer())
+```
+### Example: Add a New Bank Account to a Customer
+
+This example shows how to add new bank account to a customer. See full list of bank account attributes in API documentation
+```python
+async def add_bank_account_to_customer():
+    try:
+        customer = await payarc.customers['retrieve']('cus_j*******nDp')
+        bank_account = await customer['bank_accounts']['create']({
+            'account_number': '123432575352',
+            'routing_number': '123345349',
+            'first_name': 'John III',
+            'last_name': 'LastName III',
+            'account_type': 'Personal Savings',
+            'sec_code': 'WEB'
+        })
+        print('Bank account added successfully:', bank_account)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(add_bank_account_to_customer())
+```
+
+## Manage Candidate Merchants
+### Create new Candidate Merchant
+In the process of connecting your clients with Payarc a selection is made based on Payarc's criteria. Process begins with filling information for the merchant and creating an entry in the database. Here is an example how this process could start
+```python
+async def create_candidate_merchant():
+    try:
+        merccandidate = {
+                "Lead":
+                    {
+                        "Industry": "cbd",
+                        "MerchantName": "My applications company",
+                        "LegalName": "Best Co in w",
+                        "ContactFirstName": "Joan",
+                        "ContactLastName": "Dhow",
+                        "ContactEmail": "contact+23@mail.com",
+                        "DiscountRateProgram": "interchange"
+                    },
+                "Owners": [
+                    {
+                        "FirstName": "First",
+                        "LastName": "Last",
+                        "Title": "President",
+                        "OwnershipPct": 100,
+                        "Address": "Somewhere",
+                        "City": "City Of Test",
+                        "SSN": "4546-0034",
+                        "State": "WY",
+                        "ZipCode": "10102",
+                        "BirthDate": "1993-06-24",
+                        "Email": "nikoj@negointeresuva.com",
+                        "PhoneNo": "2346456784"
+                    }
+                ]
+            }
+        candidate = await payarc.applications['create'](merccandidate)
+        print('Candidate created successfully:', candidate)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(create_candidate_merchant())
+```
+In this example attribute `Lead` is an object representing the business as the attribute `Owners` is and array of objects representing the owners of this business. Note this is the minimum information required. For successful boarding you should provide as much information as you can, for reference see documentation. In some case the logged user has to create application in behalf of some other agent. in this case the `object_id` of this agent must be sent in the object sent to function `payarc.applications.create`.To obtain the list of agent you can use function `listSubAgents` as it is shown on examples:
+```python
+async def create_candidate_in_behalf_of_other_agent():
+    try:
+        merccandidate = {
+            "Lead":
+                {
+                    "Industry": "cbd",
+                    "MerchantName": "My applications company",
+                    "LegalName": "Best Co in w",
+                    "ContactFirstName": "Joan",
+                    "ContactLastName": "Dhow",
+                    "ContactEmail": "contact+23@mail.com",
+                    "DiscountRateProgram": "interchange"
+                },
+            "Owners": [
+                {
+                    "FirstName": "First",
+                    "LastName": "Last",
+                    "Title": "President",
+                    "OwnershipPct": 100,
+                    "Address": "Somewhere",
+                    "City": "City Of Test",
+                    "SSN": "4546-0034",
+                    "State": "WY",
+                    "ZipCode": "10102",
+                    "BirthDate": "1993-06-24",
+                    "Email": "nikoj@negointeresuva.com",
+                    "PhoneNo": "2346456784"
+                }
+            ]
+        }
+        sub_agent = await payarc.applications['list_sub_agents']()
+        merccandidate['agentId'] = sub_agent[0]['object_id'] if sub_agent else None
+        candidate = await payarc.applications['create'](merccandidate)
+        print('Candidate created successfully:', candidate)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(create_candidate_in_behalf_of_other_agent())
+```
+### Retrieve Information for Candidate Merchant
+To continue with onboarding process you might need to provide additional information or to inquiry existing leads. In the SDK  following functions exists: `list` and `retrieve`. 
+
+List all candidate merchant for current agent
+```python
+async def list_applications():
+    try:
+        response = await payarc.applications['list']()
+        applications = response['applications']
+        print(applications)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(list_applications())
+```
+Retrieve data for current candidate merchant
+```python
+async def get_candiate_merchant_by_id(id):
+    try:
+        candidate = await payarc.applications['retrieve'](id)
+        print('Candidate retrieved successfully:', candidate)
+    except Exception as error:
+        print('Error detected:', error)
+   
+asyncio.run(get_candiate_merchant_by_id('app_**********njA'))
+```
+## License [MIT](LICENSE)
