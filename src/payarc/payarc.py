@@ -38,10 +38,11 @@ class Payarc:
             'create': self.__add_lead,
             'list': self.__apply_apps,
             'retrieve': self.__retrieve_applicant,
-            'delete': self.delete_applicant,
-            'add_document': self.add_applicant_document,
-            'submit': self.submit_applicant_for_signature,
-            'delete_document': self.delete_applicant_document,
+            'update': self.__update_applicant,
+            'delete': self.__delete_applicant,
+            'add_document': self.__add_applicant_document,
+            'submit': self.__submit_applicant_for_signature,
+            'delete_document': self.__delete_applicant_document,
             'list_sub_agents': self.__sub_agents
         }
 
@@ -458,7 +459,8 @@ class Payarc:
                 docs_data.pop('meta', None)
                 applicant_data.pop('meta', None)
                 applicant_data['Documents'] = docs_data
-
+                if 'object' not in applicant_data['data']:
+                    applicant_data['data']['object'] = 'ApplyApp'
                 return self.add_object_id(applicant_data)
 
         except httpx.HTTPError as http_error:
@@ -467,62 +469,107 @@ class Payarc:
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Apply apps status'}, str(error)))
 
-    async def delete_applicant(self, applicant_id):
-        if applicant_id.startswith('app_'):
-            applicant_id = applicant_id[4:]
+    async def __delete_applicant(self, applicant):
+        if isinstance(applicant, dict):
+            applicant_id = applicant.get('object_id', applicant)
+        else:
+            applicant_id = applicant
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.delete(f"{self.base_url}applications/{applicant_id}",
-                                               headers={'Authorization': f"Bearer {self.bearer_token}"})
-            return response.json()['data']
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API delete applicant info'}, error.response)
-        except Exception as error:
-            return self.manage_error({'source': 'API delete applicant info'}, str(error))
+            if applicant_id.startswith('appl_'):
+                applicant_id = applicant_id[5:]
 
-    async def add_applicant_document(self, applicant_id, document_data=None):
-        document_data = document_data or {}
-        try:
-            if applicant_id.startswith('app_'):
-                applicant_id = applicant_id[4:]
+            # Perform the delete request
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"{self.base_url}applications/{applicant_id}/documents",
-                                             json=document_data,
-                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
+                response = await client.request(
+                    "DELETE",
+                    f"{self.base_url}agent-hub/apply/delete-lead",
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    json={'MerchantCode': applicant_id}
+                )
+                response.raise_for_status()
+
             return self.add_object_id(response.json()['data'])
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API add applicant document'}, error.response)
-        except Exception as error:
-            return self.manage_error({'source': 'API add applicant document'}, str(error))
 
-    async def delete_applicant_document(self, applicant_id, document_id):
-        try:
-            if applicant_id.startswith('app_'):
-                applicant_id = applicant_id[4:]
-            async with httpx.AsyncClient() as client:
-                response = await client.delete(f"{self.base_url}applications/{applicant_id}/documents/{document_id}",
-                                               headers={'Authorization': f"Bearer {self.bearer_token}"})
-            return response.json()['data']
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API delete applicant document'}, error.response)
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Apply apps delete'}, error.response if error.response else {}))
         except Exception as error:
-            return self.manage_error({'source': 'API delete applicant document'}, str(error))
+            raise Exception(self.manage_error({'source': 'API Apply apps delete'}, str(error)))
 
-    async def submit_applicant_for_signature(self, applicant_id):
+    async def __add_applicant_document(self, applicant, params):
+        if isinstance(applicant, dict):
+            applicant_id = applicant.get('object_id', applicant)
+        else:
+            applicant_id = applicant
+        if applicant_id.startswith('appl_'):
+            applicant_id = applicant_id[5:]
+
+        data = {
+            'MerchantCode': applicant_id,
+            'MerchantDocuments': [params]
+        }
+
         try:
-            if applicant_id.startswith('app_'):
-                applicant_id = applicant_id[4:]
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"{self.base_url}applications/{applicant_id}/submit",
-                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
-            return self.add_object_id(response.json()['data'])
-        except httpx.HTTPStatusError as error:
-            return self.manage_error({'source': 'API submit applicant for signature'}, error.response)
+                response = await client.post(f"{self.base_url}agent-hub/apply/add-documents", json=data,
+                                             headers={'Authorization': f"Bearer {self.bearer_token_agent}"})
+                response.raise_for_status()
+                return self.add_object_id(response.json())
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Apply documents add'}, error.response if error.response else {}))
         except Exception as error:
-            return self.manage_error({'source': 'API submit applicant for signature'}, str(error))
+            raise Exception(self.manage_error({'source': 'API Apply documents add'}, str(error)))
+
+    async def __delete_applicant_document(self, document):
+        if isinstance(document, dict):
+            document_id = document.get('object_id', document)
+        else:
+            document_id = document
+        try:
+            if document_id.startswith('doc_'):
+                document_id = document_id[4:]
+
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    "DELETE",
+                    f"{self.base_url}agent-hub/apply/delete-documents",
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    json={'MerchantDocuments': [{'DocumentCode': document_id}]}
+                )
+                response.raise_for_status()
+
+            return self.add_object_id(response.json())
+
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Apply document delete'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Apply document delete'}, str(error)))
+
+    async def __submit_applicant_for_signature(self, applicant):
+        if isinstance(applicant, dict):
+            applicant_id = applicant.get('object_id', applicant)
+        else:
+            applicant_id = applicant
+        try:
+            if applicant_id.startswith('appl_'):
+                applicant_id = applicant_id[5:]
+
+            # Perform the POST request
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}agent-hub/apply/submit-for-signature",
+                    json={'MerchantCode': applicant_id},
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                )
+                response.raise_for_status()
+
+            return self.add_object_id(response.json())
+
+        except httpx.HTTPError as error:
+            return self.manage_error({'source': 'API Submit for signature'}, error.response if error.response else {})
+        except Exception as error:
+            return self.manage_error({'source': 'API Submit for signature'}, str(error))
 
     async def __sub_agents(self):
-        t = [i for i in range(10)]
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -539,6 +586,36 @@ class Payarc:
             except Exception as error:
                 # Handle other potential errors
                 raise Exception(self.manage_error({'source': 'API List sub agents'}, str(error)))
+
+    async def __update_applicant(self, obj, new_data):
+        if isinstance(obj, dict):
+            data_id = obj.get('object_id', obj)
+        else:
+            data_id = obj
+
+        if data_id.startswith('appl_'):
+            data_id = data_id[5:]
+
+        default_data = {
+            "bank_account_type": "01",
+            "slugId": "financial_information",
+            "skipGIACT": True
+        }
+        new_data = {**default_data, **new_data}  # Merge default_data with new_data
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(f"{self.base_url}agent-hub/apply-apps/{data_id}",
+                                              json=new_data,
+                                              headers={'Authorization': f"Bearer {self.bearer_token_agent}"})
+                response.raise_for_status()
+                if response.status_code == 200:
+                    return await self.__retrieve_applicant(data_id)
+                return self.add_object_id(response.json())
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API update Application info'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API update Application info'}, str(error)))
 
     def add_object_id(self, obj):
         def handle_object(obj):
@@ -569,14 +646,14 @@ class Payarc:
                 elif obj.get('object') == 'ApplyApp':
                     obj['object_id'] = f"appl_{obj['id']}"
                     obj['retrieve'] = partial(self.__retrieve_applicant, obj)
-                    obj['delete'] = lambda: self.delete_applicant(obj)
-                    obj['addDocument'] = lambda: self.add_applicant_document(obj)
-                    obj['submit'] = lambda: self.submit_applicant_for_signature(obj)
-                    obj['update'] = lambda: self.update_applicant(obj)
+                    obj['delete'] = partial(self.__delete_applicant, obj)
+                    obj['add_document'] = partial(self.__add_applicant_document, obj)
+                    obj['submit'] = partial(self.__submit_applicant_for_signature, obj)
+                    obj['update'] = partial(self.__update_applicant, obj)
                     obj['list_sub_agents'] = partial(self.__sub_agents, obj)
                 elif obj.get('object') == 'ApplyDocuments':
                     obj['object_id'] = f"doc_{obj['id']}"
-                    obj['delete'] = lambda: self.delete_applicant_document(obj)
+                    obj['delete'] = partial(self.__delete_applicant_document, obj)
                 elif obj.get('object') == 'Campaign':
                     obj['object_id'] = f"cmp_{obj['id']}"
                     obj['update'] = lambda: self.update_campaign(obj)
@@ -592,10 +669,10 @@ class Payarc:
                 obj['object'] = 'ApplyApp'
                 del obj['MerchantCode']
                 obj['retrieve'] =partial(self.__retrieve_applicant, obj)
-                obj['delete'] = lambda: self.delete_applicant(obj)
-                obj['addDocument'] = lambda: self.add_applicant_document(obj)
-                obj['submit'] = lambda: self.submit_applicant_for_signature(obj)
-                obj['update'] = lambda: self.update_applicant(obj)
+                obj['delete'] = partial(self.__delete_applicant, obj)
+                obj['add_document'] = partial(self.__add_applicant_document, obj)
+                obj['submit'] = partial(self.__submit_applicant_for_signature, obj)
+                obj['update'] = partial(self.__update_applicant, obj)
                 obj['list_sub_agents'] = partial(self.__sub_agents, obj)
             elif 'plan_id' in obj:
                 obj['object_id'] = obj['plan_id']
