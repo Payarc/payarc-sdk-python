@@ -444,6 +444,46 @@ async def submit_application():
         print('Application submitted successfully:', application)
     except Exception as error:
         print('Error detected:', error)
+
+
+async def create_plan():
+    plan_data = {
+        'name': 'Monthly billing regular',
+        'amount': 999,
+        'interval': 'month',
+        'statement_descriptor': '2024 MerchantT. Rglr srvc'
+    }
+    try:
+        plan = await payarc.billing['plan']['create'](plan_data)
+        print('Plan created:', plan)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_plan():
+    try:
+        plans = await payarc.billing['plan']['list']()
+        plan = plans['plans'][0]
+        if plan:
+            updated_plan = await plan['update']({'name': 'Monthly billing regular II'})
+            print('Plan updated:', updated_plan)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_plan_by_id(id):
+    try:
+        updated_plan = await payarc.billing['plan']['update'](id,
+                                                              {
+                                                                  'name': 'Monthly billing regular II'
+                                                              }
+                                                              )
+        print('Plan updated:', updated_plan)
+    except Exception as error:
+        print('Error detected:', error
+              )
+
+
 # Run the example
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
@@ -474,4 +514,6 @@ if __name__ == "__main__":
     # asyncio.run(update_candidate_merchant('appl_3alndgy6xoep49y8'))
     # asyncio.run(add_document_to_candidate_merchant('appl_3alndgy6xoep49y8'))
     # asyncio.run(remove_document_from_candidate_merchant())
-    asyncio.run(remove_document_by_id())
+    # asyncio.run(remove_document_by_id())
+    # asyncio.run(create_plan())
+    asyncio.run(update_plan())

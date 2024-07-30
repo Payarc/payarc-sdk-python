@@ -92,9 +92,23 @@ SDK is build around object payarc. From this object you can access properties an
     list - returns a list of application object representing future merchants. Use this function to find the interested identifier. 
     retrieve - based on identifier or an object returned from list function, this function will return details 
     delete - in case candidate merchant is no longer needed it will remove information for it.
-    addDocument - this function is adding base64 encoded document to existing candidate merchant. For different types of document required in the process contact Payarc. See examples how the function could be invoked
-    deleteDocument - this function removes document, when document is no longer valid.
+    add_document - this function is adding base64 encoded document to existing candidate merchant. For different types of document required in the process contact Payarc. See examples how the function could be invoked
+    delete_document - this function removes document, when document is no longer valid.
     submit - this function initialize the process of sing off contract between Payarc and your client
+
+### Object `payarc.billing`
+This object is aggregating other objects responsible for recurrent payments. Nowadays they are `plan` and `subscription`.
+
+### Object `payarc.billing.plan`
+#### This object contains information specific for each plan like identification details, rules for payment request and additional information. This object ahs methods for:
+    create - you can programmatically created new objects to meet client's needs,
+    list - inquiry available plans,
+    retrieve - collect detailed information for a plan,
+    update - modify details of a plan,
+    delete - remove plan when no longer needed,
+    create_subscription: issue a subscription for a customer from a plan.
+Based on plans you can create subscription. Time scheduled job will request and collect payments (charges) according plan schedule from customer
+
 First, initialize the Payarc SDK with your API key:
 
 ```python
@@ -715,5 +729,58 @@ async def submit_application():
         print('Error detected:', error)
         
 asyncio.run(submit_application())
+```
+## Recurrent Payments Setup
+Recurrent payments, also known as subscription billing, are essential for any service-based business that requires regular, automated billing of customers. By setting up recurrent payments through our SDK, you can offer your customers the ability to easily manage subscription plans, ensuring timely and consistent revenue streams. This setup involves creating subscription plans, managing customer subscriptions, and handling automated billing cycles. Below, we outline the steps necessary to integrate recurrent payments into your application using our SDK.
+
+### Creating Subscription Plans
+The first step in setting up recurrent payments is to create subscription plans. These plans define the billing frequency, pricing, and any trial periods or discounts. Using our SDK, you can create multiple subscription plans to cater to different customer needs. Here is an example of how to create a plan:
+```python
+async def create_plan():
+    plan_data = {
+        'name': 'Monthly billing regular',
+        'amount': 999,
+        'interval': 'month',
+        'statement_descriptor': '2024 MerchantT. Rglr srvc'
+    }
+    try:
+        plan = await payarc.billing['plan']['create'](plan_data)
+        print('Plan created:', plan)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(create_plan())
+```
+In this example a new plan is created in attribute `name` client friendly name of the plan must be provided. Attribute `amount` is number in cents. in `interval` you specify how often the request for charge will occurs. Information in `statement_descriptor` will be present in the reason for payment request. For more attributes and details check API documentation.
+
+### Updating Subscription Plan
+Once plan is created sometimes it is required details form it to be changed. The SDK allow you to manipulate object `plan` or to refer to the object by ID. here are examples how to change details of a plan:
+```python
+async def update_plan():
+    try:
+        plans = await payarc.billing['plan']['list']()
+        plan = plans['plans'][0]
+        if plan:
+            updated_plan = await plan['update']({'name': 'Monthly billing regular II'})
+            print('Plan updated:', updated_plan)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(update_plan())
+```
+Update plan when know the ID
+```python
+async def update_plan_by_id(id):
+    try:
+        updated_plan = await payarc.billing['plan']['update'](id,
+                                                              {
+                                                                  'name': 'Monthly billing regular II'
+                                                              }
+                                                              )
+        print('Plan updated:', updated_plan)
+    except Exception as error:
+        print('Error detected:', error
+              )
+asyncio.run(update_plan_by_id('plan_3aln*******8y8'))
 ```
 ## License [MIT](LICENSE)

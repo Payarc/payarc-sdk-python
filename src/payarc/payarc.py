@@ -6,7 +6,6 @@ from functools import partial
 
 
 class Payarc:
-
     url_map = {
         'prod': 'https://api.payarc.net',
         'sandbox': 'https://testapi.payarc.net'
@@ -44,6 +43,21 @@ class Payarc:
             'submit': self.__submit_applicant_for_signature,
             'delete_document': self.__delete_applicant_document,
             'list_sub_agents': self.__sub_agents
+        }
+        self.billing = {
+            'plan': {
+                'create': self.__create_plan,
+                'list': self.__list_plans,
+                'retrieve': self.__get_plan,
+                'update': self.__update_plan,
+                'delete': self.__delete_plan,
+                'create_subscription': self.__create_subscription,
+                # 'subscription': {
+                #     'cancel': self.__cancel_subscription,
+                #     'update': self.__update_subscription,
+                #     'list': self.__list_subscriptions
+                # }
+            }
         }
 
     async def __create_charge(self, obj, charge_data=None):
@@ -333,7 +347,7 @@ class Payarc:
 
         except httpx.HTTPError as error:
             raise Exception(self.manage_error({'source': 'API BankAccount to customer'},
-                                     error.response if error.response else {}))
+                                              error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API BankAccount to customer'}, str(error)))
         else:
@@ -491,7 +505,8 @@ class Payarc:
             return self.add_object_id(response.json()['data'])
 
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API Apply apps delete'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API Apply apps delete'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Apply apps delete'}, str(error)))
 
@@ -515,7 +530,8 @@ class Payarc:
                 response.raise_for_status()
                 return self.add_object_id(response.json())
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API Apply documents add'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API Apply documents add'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Apply documents add'}, str(error)))
 
@@ -540,7 +556,8 @@ class Payarc:
             return self.add_object_id(response.json())
 
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API Apply document delete'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API Apply document delete'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Apply document delete'}, str(error)))
 
@@ -582,7 +599,8 @@ class Payarc:
                 return sub_agents
             except httpx.HTTPError as http_error:
                 # Handle HTTP errors
-                raise Exception(self.manage_error({'source': 'API List sub agents'}, http_error.response if http_error.response else {}))
+                raise Exception(self.manage_error({'source': 'API List sub agents'},
+                                                  http_error.response if http_error.response else {}))
             except Exception as error:
                 # Handle other potential errors
                 raise Exception(self.manage_error({'source': 'API List sub agents'}, str(error)))
@@ -613,9 +631,126 @@ class Payarc:
                     return await self.__retrieve_applicant(data_id)
                 return self.add_object_id(response.json())
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API update Application info'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API update Application info'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API update Application info'}, str(error)))
+
+    async def __create_plan(self, data):
+        data.setdefault('currency', 'usd')
+        data.setdefault('plan_type', 'digital')
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(f"{self.base_url}plans", json=data,
+                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
+                response.raise_for_status()
+                return self.add_object_id(response.json().get('data'))
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error({'source': 'API Create plan ...'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create plan ...'}, str(error)))
+
+    async def __list_plans(self, params=None):
+        if params is None:
+            params = {}
+        if 'limit' not in params:
+            params['limit'] = "99999"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.base_url}plans",
+                                            headers={'Authorization': f"Bearer {self.bearer_token}"}, params=params)
+                response.raise_for_status()
+                data = response.json().get('data', {})
+                plans = [self.add_object_id(plan) for plan in data]
+                pagination = response.json().get('meta', {}).get('pagination', {})
+                pagination.pop('links', None)
+                return {'plans': plans, 'pagination': pagination}
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get all plans'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get all plans'}, str(error)))
+
+    async def __get_plan(self, params):
+        if isinstance(params, dict):
+            data = params.get('object_id', params)
+        else:
+            data = params
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.base_url}plans/{data}",
+                                            headers={'Authorization': f"Bearer {self.bearer_token}"})
+                response.raise_for_status()
+                data = response.json().get('data', {})
+                return self.add_object_id(data)
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get plan details'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get plan details'}, str(error)))
+
+    async def __update_plan(self, params, new_data):
+        if isinstance(params, dict):
+            data_id = params.get('object_id', params)
+        else:
+            data_id = params
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{self.base_url}plans/{data_id}",
+                    json=new_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+                return self.add_object_id(response.json().get('data', {}))
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API update customer info'}, str(error)))
+
+    async def __delete_plan(self, params):
+        if isinstance(params, dict):
+            data_id = params.get('object_id', params)
+        else:
+            data_id = params
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.delete(
+                    f"{self.base_url}plans/{data_id}",
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+                return self.add_object_id(response.json().get('data', {}))
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API delete plan'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API delete plan'}, str(error)))
+
+    async def __create_subscription(self, params, new_data=None):
+        if isinstance(params, dict):
+            data_id = params.get('object_id', params)
+        else:
+            data_id = params
+        try:
+            if not new_data:
+                new_data = {}
+            new_data['plan_id'] = data_id
+            new_data['customer_id'] = (
+                new_data['customer_id'][4:] if new_data['customer_id'].startswith('cus_') else new_data['customer_id']
+            )
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}subscriptions",
+                    json=new_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+                return self.add_object_id(response.json().get('data', {}))
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Create subscription'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create subscription'}, str(error)))
 
     def add_object_id(self, obj):
         def handle_object(obj):
@@ -668,7 +803,7 @@ class Payarc:
                 obj['object_id'] = f"appl_{obj['MerchantCode']}"
                 obj['object'] = 'ApplyApp'
                 del obj['MerchantCode']
-                obj['retrieve'] =partial(self.__retrieve_applicant, obj)
+                obj['retrieve'] = partial(self.__retrieve_applicant, obj)
                 obj['delete'] = partial(self.__delete_applicant, obj)
                 obj['add_document'] = partial(self.__add_applicant_document, obj)
                 obj['submit'] = partial(self.__submit_applicant_for_signature, obj)
@@ -678,10 +813,10 @@ class Payarc:
                 obj['object_id'] = obj['plan_id']
                 obj['object'] = 'Plan'
                 del obj['plan_id']
-                obj['retrieve'] = partial(self.retrieve_plan, obj)
-                obj['update'] = partial(self.update_plan, obj)
-                obj['delete'] = partial(self.delete_plan, obj)
-                obj['createSubscription'] = partial(self.create_subscription, obj)
+                obj['retrieve'] = partial(self.__get_plan, obj)
+                obj['update'] = partial(self.__update_plan, obj)
+                obj['delete'] = partial(self.__delete_plan, obj)
+                obj['create_subscription'] = partial(self.__create_subscription, obj)
 
             for key in obj:
                 if isinstance(obj[key], dict):
