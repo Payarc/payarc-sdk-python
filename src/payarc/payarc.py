@@ -52,11 +52,11 @@ class Payarc:
                 'update': self.__update_plan,
                 'delete': self.__delete_plan,
                 'create_subscription': self.__create_subscription,
-                # 'subscription': {
-                #     'cancel': self.__cancel_subscription,
-                #     'update': self.__update_subscription,
-                #     'list': self.__list_subscriptions
-                # }
+                'subscription': {
+                    'cancel': self.__cancel_subscription,
+                    'update': self.__update_subscription,
+                    'list': self.__list_subscriptions
+                }
             }
         }
 
@@ -751,6 +751,71 @@ class Payarc:
             raise Exception(self.manage_error({'source': 'API Create subscription'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Create subscription'}, str(error)))
+
+    async def __list_subscriptions(self, params=None):
+        if params is None:
+            params = {}
+        if 'limit' not in params:
+            params['limit'] = "99999"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.base_url}subscriptions", params=params,
+                                            headers={'Authorization': f"Bearer {self.bearer_token}"})
+                response.raise_for_status()
+                data = response.json().get('data', {})
+                subscriptions = [self.add_object_id(sub) for sub in data]
+                pagination = response.json().get('meta', {}).get('pagination', {})
+                pagination.pop('links', None)
+                return {'subscriptions': subscriptions, 'pagination': pagination}
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get all subscriptions'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get all subscriptions'}, str(error)))
+
+    async def __update_subscription(self, params, new_data):
+        if isinstance(params, dict):
+            data_id = params.get('object_id', params)
+        else:
+            data_id = params
+        try:
+            if data_id.startswith('sub_'):
+                data_id = data_id[4:]
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{self.base_url}subscriptions/{data_id}",
+                    json=new_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token}'"}
+                )
+                response.raise_for_status()
+                data = response.json().get('data', {})
+                return self.add_object_id(data)
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API update customer info'}, str(error)))
+
+    async def __cancel_subscription(self, params):
+        if isinstance(params, dict):
+            data_id = params.get('object_id', params)
+        else:
+            data_id = params
+        try:
+            if data_id.startswith('sub_'):
+                data_id = data_id[4:]
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{self.base_url}subscriptions/{data_id}/cancel",
+                    json={},
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+                data = response.json().get('data', {})
+                return self.add_object_id(data)
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API cancel subscription'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API cancel subscription'}, str(error)))
 
     def add_object_id(self, obj):
         def handle_object(obj):

@@ -244,7 +244,7 @@ async def list_customer_with_limit(limit):
         data = await payarc.customers['list']({'limit': limit})
         customers = data['customers']
         pagination = data['pagination']
-        print(customers[0]['card']['data'])
+        print(customers)
         print(pagination)
     except Exception as error:
         print('Error detected:', error)
@@ -484,6 +484,48 @@ async def update_plan_by_id(id):
               )
 
 
+async def create_subscription():
+    try:
+        plans = await payarc.billing['plan']['list']({'search': 'iron'})
+        subscriber = {
+            'customer_id': 'cus_DPNMVjx4AMNNVnjA',
+        }
+        plans = plans['plans']
+        if plans:
+            plan = plans[0]
+            if plan:
+                subscription = await plan['create_subscription'](subscriber)
+                print('Subscription created:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def create_subscription_by_plan_id():
+    try:
+        subscriber = {
+            'customer_id': 'cus_D**********njA',
+        }
+        subscription = await payarc.billing['plan']['create_subscription']('plan_3aln*******8y8', subscriber)
+        print('Subscription created:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def list_subscription():
+    try:
+        subscriptions = await payarc.billing['plan']['subscription']['list']({'search': 'iron'})
+        print('Subscriptions:', subscriptions)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_subscription():
+    try:
+        subscription = await payarc.billing['plan']['subscription']['update']('sub_Vg0rxj00AVrjPAoX', {'description':'Monthly for VIP'})
+        print('Subscription updated:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+
 # Run the example
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
@@ -516,4 +558,7 @@ if __name__ == "__main__":
     # asyncio.run(remove_document_from_candidate_merchant())
     # asyncio.run(remove_document_by_id())
     # asyncio.run(create_plan())
-    asyncio.run(update_plan())
+    # asyncio.run(update_plan())
+    # asyncio.run(create_subscription())
+    # asyncio.run(list_subscription())
+    asyncio.run(update_subscription())

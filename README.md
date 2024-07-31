@@ -783,4 +783,99 @@ async def update_plan_by_id(id):
               )
 asyncio.run(update_plan_by_id('plan_3aln*******8y8'))
 ```
+
+
+### Creating Subscriptions
+Once you have created subscription plans, the next step is to manage customer subscriptions. This involves subscribing customers to the plans they choose and managing their billing information. Our SDK makes it easy to handle these tasks. Here's how you can subscribe a customer to a plan:
+
+#### Create a subscription over `plan` object
+```python
+
+async def create_subscription():
+    try:
+        plans = await payarc.billing['plan']['list']({'search': 'iron'})
+        subscriber = {
+            'customer_id': 'cus_DPNMVjx4AMNNVnjA',
+        }
+        plans = plans['plans']
+        if plans:
+            plan = plans[0]
+            if plan:
+                subscription = await plan['create_subscription'](subscriber)
+                print('Subscription created:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(create_subscription())
+
+```
+#### # Create a subscription with plan id
+```python
+async def create_subscription_by_plan_id():
+    try:
+        subscriber = {
+            'customer_id': 'cus_D**********njA',
+        }
+        subscription = await payarc.billing['plan']['create_subscription']('plan_3aln*******8y8', subscriber)
+        print('Subscription created:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(create_subscription_by_plan_id())
+```
+This code subscribes a customer to the premium plan using their saved payment method. The SDK handles the rest, including storing the subscription details and scheduling the billing cycle.
+
+
+### Listing Subscriptions
+To collect already created subscriptions you can use method `list` as in the example 
+```python
+async def list_subscription():
+    try:
+        subscriptions = await payarc.billing['plan']['subscription']['list']()
+        print('Subscriptions:', subscriptions)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(list_subscription())
+```
+
+#### You can sent parameters to filter on result for example the quantity and the plan
+```python
+async def list_subscription_with_filter():
+    try:
+        subscriptions = await payarc.billing['plan']['subscription']['list']({'limit': 3, 'plan':'plan_7****f'})
+        print('Subscriptions:', subscriptions)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(list_subscription_with_filter())
+```
+
+### Updating Subscription
+To manipulate subscription SDK is providing few methods `update` and `cancel`, both can be used with identifier of subscription or over subscription object. Examples of their invocations:
+#### Update subscription with ID
+```python
+async def update_subscription():
+    try:
+        subscription = await payarc.billing['plan']['subscription']['update']('sub_Vg0rxj00AVrjPAoX', {'description':'Monthly for VIP'})
+        print('Subscription updated:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(update_subscription())
+```
+#### Cancel subscription with ID
+```python
+async def cancel_subscription():
+    try:
+        subscription = await payarc.billing['plan']['subscription']['cancel']('sub_Vg0rxj00AVrjPAoX')
+        print('Subscription canceled:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(cancel_subscription())
+```
+
+This documentation should help you understand how to use the Payarc SDK to manage charges and customers. If you have any questions, please refer to the Payarc API documentation or contact support.
+
 ## License [MIT](LICENSE)
