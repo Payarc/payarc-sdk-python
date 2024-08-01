@@ -730,6 +730,97 @@ async def submit_application():
         
 asyncio.run(submit_application())
 ```
+
+## Split Payment
+
+As ISV you can create campaigns to manage financial details around your processing merchants. In the SDK the object representing this functionality is `split_campaigns` this object has functions to create. list, update campaigns. Here below are examples related to manipulation of campaign.
+
+
+### List all campaigns
+
+To inquiry all campaigns available for your agent
+```python
+async def list_campaign():
+    try:
+        campaigns = await payarc.split_campaigns['list']()
+        print('Campaigns:', campaigns)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(list_campaign())
+```
+
+as result a list of campaigns is returned. based on this list you can update details
+
+
+### List all processing merchants
+
+Use this function to get collection of processing merchants. Later on you can assign campaigns to them
+```python
+async def list_all_processing_merchants():
+    try:
+        merchants = await payarc.split_campaigns['list_accounts']()
+        print('Merchants:', merchants['campaign_accounts'])
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(list_all_processing_merchants())
+```
+
+
+### Create and retrieve details for campaign
+
+Use this function to create new campaign
+```python
+async def create_campaign():
+    try:
+        campaign = await payarc.split_campaigns['create']({
+            'name': 'Mega bonus',
+            'description': "Compliment for my favorite customers",
+            'note': "Only for VIPs",
+            'base_charge': 33.33,
+            'perc_charge': 7.77,
+            'is_default': '0',
+            'accounts': []
+        })
+        print('Campaign created:', campaign)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(create_campaign())
+```
+
+as result the new campaign is returned use it as an object of reference to `object_id`. IF you need to query details about the campaign see the example below.
+```python
+async def get_campaign_by_id(id):
+    try:
+        campaign = await payarc.split_campaigns['retrieve'](id)
+        print('Campaign retrieved:', campaign)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(get_campaign_by_id('cmp_o3**********86n5'))
+```
+
+
+### Update campaign details
+
+In case you need to update details of the campaign use `update` function. in the examples below you can reference campaign by id or as an object
+```python
+async def update_campaign():
+    try:
+        payload = {
+                      'notes': "new version of notes"
+                  }
+
+        campaign = await payarc.split_campaigns['update']('cmp_o3maq0gklr78p6n5', payload)
+        print('Campaign updated:', campaign)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(update_campaign())
+```
+
 ## Recurrent Payments Setup
 Recurrent payments, also known as subscription billing, are essential for any service-based business that requires regular, automated billing of customers. By setting up recurrent payments through our SDK, you can offer your customers the ability to easily manage subscription plans, ensuring timely and consistent revenue streams. This setup involves creating subscription plans, managing customer subscriptions, and handling automated billing cycles. Below, we outline the steps necessary to integrate recurrent payments into your application using our SDK.
 

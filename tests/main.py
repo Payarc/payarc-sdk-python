@@ -521,8 +521,61 @@ async def list_subscription():
 
 async def update_subscription():
     try:
-        subscription = await payarc.billing['plan']['subscription']['update']('sub_Vg0rxj00AVrjPAoX', {'description':'Monthly for VIP'})
+        subscription = await payarc.billing['plan']['subscription']['update']('sub_Vg0rxj00AVrjPAoX',
+                                                                              {'description': 'Monthly for VIP'})
         print('Subscription updated:', subscription)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def list_campaign():
+    try:
+        campaigns = await payarc.split_campaigns['list']()
+        print('Campaigns:', campaigns)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def list_all_processing_merchants():
+    try:
+        merchants = await payarc.split_campaigns['list_accounts']()
+        print('Merchants:', merchants['campaign_accounts'])
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def create_campaign():
+    try:
+        campaign = await payarc.split_campaigns['create']({
+            'name': 'Mega bonus',
+            'description': "Compliment for my favorite customers",
+            'notes': "Only for VIPs",
+            'base_charge': 33.33,
+            'perc_charge': 7.77,
+            'is_default': '0',
+            'accounts': []
+        })
+        print('Campaign created:', campaign)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def get_campaign_by_id(id):
+    try:
+        campaign = await payarc.split_campaigns['retrieve'](id)
+        print('Campaign retrieved:', campaign)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_campaign():
+    try:
+        payload = {
+                      'notes': "new version of notes"
+                  }
+
+        campaign = await payarc.split_campaigns['update']('cmp_o3maq0gklr78p6n5', payload)
+        print('Campaign updated:', campaign)
     except Exception as error:
         print('Error detected:', error)
 
@@ -561,4 +614,9 @@ if __name__ == "__main__":
     # asyncio.run(update_plan())
     # asyncio.run(create_subscription())
     # asyncio.run(list_subscription())
-    asyncio.run(update_subscription())
+    # asyncio.run(update_subscription())
+    # asyncio.run(list_campaign())
+    # asyncio.run(list_all_processing_merchants())
+    # asyncio.run(create_campaign())
+    # asyncio.run(get_campaign_by_id('cmp_o3**********86n5'))
+    asyncio.run(update_campaign())

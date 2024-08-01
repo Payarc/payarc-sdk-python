@@ -44,6 +44,13 @@ class Payarc:
             'delete_document': self.__delete_applicant_document,
             'list_sub_agents': self.__sub_agents
         }
+        self.split_campaigns = {
+            'create': self.__create_campaign,
+            'list': self.__list_campaigns,
+            'retrieve': self.__get_campaign,
+            'update': self.__update_campaign,
+            'list_accounts': self.__list_campaign_accounts,
+        }
         self.billing = {
             'plan': {
                 'create': self.__create_plan,
@@ -669,7 +676,8 @@ class Payarc:
                 pagination.pop('links', None)
                 return {'plans': plans, 'pagination': pagination}
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get all plans'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get all plans'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all plans'}, str(error)))
 
@@ -686,7 +694,8 @@ class Payarc:
                 data = response.json().get('data', {})
                 return self.add_object_id(data)
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get plan details'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get plan details'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get plan details'}, str(error)))
 
@@ -705,7 +714,8 @@ class Payarc:
                 response.raise_for_status()
                 return self.add_object_id(response.json().get('data', {}))
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API update customer info'}, str(error)))
 
@@ -748,7 +758,8 @@ class Payarc:
                 response.raise_for_status()
                 return self.add_object_id(response.json().get('data', {}))
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API Create subscription'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API Create subscription'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Create subscription'}, str(error)))
 
@@ -769,7 +780,8 @@ class Payarc:
                 pagination.pop('links', None)
                 return {'subscriptions': subscriptions, 'pagination': pagination}
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get all subscriptions'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get all subscriptions'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all subscriptions'}, str(error)))
 
@@ -791,7 +803,8 @@ class Payarc:
                 data = response.json().get('data', {})
                 return self.add_object_id(data)
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API update customer info'}, str(error)))
 
@@ -813,9 +826,102 @@ class Payarc:
                 data = response.json().get('data', {})
                 return self.add_object_id(data)
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API cancel subscription'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API cancel subscription'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API cancel subscription'}, str(error)))
+
+    # Split campaigns
+    async def __create_campaign(self, data):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}agent-hub/campaigns",
+                    json=data,
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                )
+                response.raise_for_status()  # Raises an exception for HTTP error responses
+                return self.add_object_id(response.json()['data'])
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Create campaign ...'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create campaign ...'}, {'message': str(error)}))
+
+    async def __list_campaigns(self):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}agent-hub/campaigns",
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    params={'limit': 0}
+                )
+                response.raise_for_status()  # Raises an exception for HTTP error responses
+                return self.add_object_id(response.json()['data'])
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get campaigns status'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get campaigns status'}, {'message': str(error)}))
+
+    async def __get_campaign(self, key):
+        try:
+            key_id = key.get('object_id', key) if isinstance(key, dict) else key
+            if key_id.startswith('cmp_'):
+                key_id = key_id[4:]
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}agent-hub/campaigns/{key_id}",
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    params={'limit': 0}
+                )
+                response.raise_for_status()  # Ensure we handle HTTP errors
+                return self.add_object_id(response.json()['data'])
+
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get campaigns status'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get campaigns status'}, str(error)))
+
+    async def __update_campaign(self, data, new_data):
+        data_id = data.get('object_id', data) if isinstance(data, dict) else data
+        if data_id.startswith('cmp_'):
+            data_id = data_id[4:]
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{self.base_url}agent-hub/campaigns/{data_id}",
+                    json=new_data,
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                )
+                response.raise_for_status()
+                return self.add_object_id(response.json()['data'])
+
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API update customer info'}, str(error)))
+
+    async def __list_campaign_accounts(self):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}account/my-accounts",
+                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                )
+                response.raise_for_status()
+                data = response.json()
+                proc_merchants = [self.add_object_id(p_m) for p_m in data]
+                if isinstance(data, dict):
+                    pagination = data.get('meta', {}).get('pagination', {})
+                    pagination.pop('links', None)
+                else:
+                    pagination = {}
+                return {'campaign_accounts': proc_merchants, 'pagination': pagination}
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get all merchants'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get all merchants'}, str(error)))
 
     def add_object_id(self, obj):
         def handle_object(obj):
@@ -856,14 +962,14 @@ class Payarc:
                     obj['delete'] = partial(self.__delete_applicant_document, obj)
                 elif obj.get('object') == 'Campaign':
                     obj['object_id'] = f"cmp_{obj['id']}"
-                    obj['update'] = lambda: self.update_campaign(obj)
-                    obj['retrieve'] = lambda: self.get_dtl_campaign(obj)
+                    obj['update'] = partial(self.__update_campaign, obj)
+                    obj['retrieve'] = partial(self.__get_campaign, obj)
                 elif obj.get('object') == 'User':
                     obj['object_id'] = f"usr_{obj['id']}"
                 elif obj.get('object') == 'Subscription':
                     obj['object_id'] = f"sub_{obj['id']}"
-                    obj['cancel'] = lambda: self.cancel_subscription(obj)
-                    obj['update'] = lambda: self.update_subscription(obj)
+                    obj['cancel'] = partial(self.__cancel_subscription, obj)
+                    obj['update'] = partial(self.__update_subscription, obj)
             elif 'MerchantCode' in obj:
                 obj['object_id'] = f"appl_{obj['MerchantCode']}"
                 obj['object'] = 'ApplyApp'
