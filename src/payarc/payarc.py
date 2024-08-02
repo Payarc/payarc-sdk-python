@@ -1,7 +1,8 @@
 import asyncio
 import json
-
+from datetime import datetime, timedelta
 import httpx
+import base64
 from functools import partial
 
 
@@ -65,6 +66,11 @@ class Payarc:
                     'list': self.__list_subscriptions
                 }
             }
+        }
+        self.disputes = {
+            'list': self.__list_cases,
+            'retrieve': self.__get_case,
+            'add_document': self.__add_document_case
         }
 
     async def __create_charge(self, obj, charge_data=None):
@@ -923,6 +929,113 @@ class Payarc:
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all merchants'}, str(error)))
 
+    async def __list_cases(self, params=None):
+        def format_date(date):
+            return date.strftime('%Y-%m-%d')  # Format date to 'YYYY-MM-DD'
+
+        try:
+            if params is None:
+                current_date = datetime.now()
+                tomorrow_date = format_date(current_date + timedelta(days=1))
+                last_month_date = format_date(current_date - timedelta(days=30))
+                params = {
+                    'report_date[gte]': last_month_date,
+                    'report_date[lte]': tomorrow_date
+                }
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}cases",
+                    headers={'Authorization': f"Bearer {self.bearer_token}"},
+                    params=params
+                )
+                response.raise_for_status()
+                data = response.json()
+                cases = [self.add_object_id(case) for case in data['data']]
+                if isinstance(data, dict):
+                    pagination = data.get('meta', {}).get('pagination', {})
+                    pagination.pop('links', None)
+                else:
+                    pagination = {}
+                return {'cases': cases, 'pagination': pagination}
+
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get all disputes'},  error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get all disputes'}, str(error)))
+
+    async def __get_case(self, params):
+        data_id = params.get('object_id', params) if isinstance(params, dict) else params
+        data_id = data_id[4:] if data_id.startswith('dis_') else data_id
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}cases/{data_id}",
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                response.raise_for_status()
+                # Return the transformed data
+                return self.add_object_id(response.json().get('primary_case', {}).get('data', {}))
+
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API get dispute details'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get dispute details'}, str(error)))
+
+    async def __add_document_case(self, dispute, params):
+        dispute_id = dispute.get('object_id', dispute) if isinstance(dispute, dict) else dispute
+        if dispute_id.startswith('dis_'):
+            dispute_id = dispute_id[4:]
+
+        headers = {}
+        form_data = ""
+        form_data_buffer = None
+        if params and params.get('DocumentDataBase64'):
+            binary_file = base64.b64decode(params['DocumentDataBase64'])
+            boundary = '----WebKitFormBoundary' + '3OdUODzy6DLxDNt8'  # Create a unique boundary
+
+            form_data += f"--{boundary}\r\n"
+            form_data += f"Content-Disposition: form-data; name=\"file\"; filename=\"filename1.png\"\r\n"
+            form_data += f"Content-Type: {params.get('mimeType', 'application/pdf')}\r\n\r\n"
+            form_data += binary_file.decode('latin1')
+            form_data += f"\r\n--{boundary}--\r\n"
+
+            if params.get('text'):
+                form_data += f"--{boundary}\r\n"
+                form_data += f"Content-Disposition: form-data; name=\"text\"\r\n\r\n"
+                form_data += f"{params['text']}\r\n"
+                form_data += f"--{boundary}--\r\n"
+
+            form_data_buffer = form_data.encode('latin1')
+
+            headers = {
+                'Content-Type': f'multipart/form-data; boundary={boundary}',
+                'Content-Length': str(len(form_data_buffer))
+            }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}cases/{dispute_id}/evidence",
+                    content=form_data_buffer,
+                    headers={'Authorization': f"Bearer {self.bearer_token}", **headers}
+                )
+                response.raise_for_status()
+
+                sub_response = await client.post(
+                    f"{self.base_url}cases/{dispute_id}/submit",
+                    json={'message': params.get('message', 'Case number#: xxxxxxxx, submitted by SDK')},
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                sub_response.raise_for_status()
+
+                return self.add_object_id(response.json())
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Dispute documents add'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Dispute documents add'}, str(error)))
+
     def add_object_id(self, obj):
         def handle_object(obj):
             if 'id' in obj or 'customer_id' in obj:
@@ -970,6 +1083,9 @@ class Payarc:
                     obj['object_id'] = f"sub_{obj['id']}"
                     obj['cancel'] = partial(self.__cancel_subscription, obj)
                     obj['update'] = partial(self.__update_subscription, obj)
+                elif obj.get('object') == 'Cases':
+                    obj['object'] = 'Dispute'
+                    obj['object_id'] = f"dis_{obj['id']}"
             elif 'MerchantCode' in obj:
                 obj['object_id'] = f"appl_{obj['MerchantCode']}"
                 obj['object'] = 'ApplyApp'

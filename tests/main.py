@@ -579,6 +579,34 @@ async def update_campaign():
     except Exception as error:
         print('Error detected:', error)
 
+
+async def list_cases():
+    try:
+        cases = await payarc.disputes['list']()
+        print('Cases:', cases)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def get_case(id):
+    try:
+        case = await payarc.disputes['retrieve'](id)
+        print('Case:', case)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def submit_case():
+    document_base64 = "iVBORw0KGgoAAAANSUhEUgAAAIUAAABsCAYAAABEkXF2AAAABHNCSVQICAgIfAhkiAAAAupJREFUeJzt3cFuEkEcx/E/001qUQ+E4NF48GB4BRM9+i59AE16ANlE4wv4Mp5MjI8gZ+ONEMJBAzaWwZsVf2VnstPZpfb7STh06ewu5JuFnSzQ8d5vDfiLa3sHcHiIAoIoIIgCgiggitwbWM/f2vniTe7NoIZ7Dz9Y0X0qy7NHYfbLtn6dfzOoYXPlUl4+IIgCooGXj10ngzM77p81vVmY2Y9vL+xi9Tn4f41HYVZYx3Wb3yws9oWBlw8IooAgCgiigCAKCKKAIAoIooAgCoikGU3nqpvy3qesPvv6+/2+LZfLpHUcsrrPD0cKCKKAIAoIooAgCgiigCAKCOecs7q3iJXbZDLZWVaWZfR4733lLbfZbBbchzZvvV4vy+PmSAFBFBBEAUEUEEQBQRQQRAFR5DzfD81FxMxVpMg9l3HT938fjhQQRAFBFBBEAUEUEEQBQRQQRe5z7SptnYejGkcKCKKAIAoIooAgCgiigCAKiKQoYj6bMB6Pd8aMRqPoz22kfCalzfmXm45nDoIoIIgCgiggiAKCKCCIAiJrFKnfTxHS9vdX5P7+ibZwpIAgCgiigCAKCKKAIAoIooDomNl2352hc+WY3+NYzyf2c345V3EyGNmdwevo8anbr3Lbfu/j+9fndrH69Ofv+48+WtF9JuM4UkAQBQRRQBAFBFFAEAUEUUBUfo9m6jUPzjl7eWr26vRyWVmW9u59GT2+Suo1B4vFImn8/4ojBQRRQBAFBFFAEAUEUUAQBUTHe7/3eorUeYrQ9RSprmP/UtZ/6OP/xfUUqI0oIIgCgiggiqY36Ddz25x/uZZ1PXmcNj60H6H1H/p4sV1F/VvjZx84HJx9IFrl733wexy3U/b3FO7ogR0dD7OsezqdVt4/HFZvNzQ+t9T9C40P6ty9erElfEKsbblnDHNrekYzFu8pIIgCgiggiAKCKCAqzz5Ccr+7T3133fb1DG0//ro4UkAQBQRRQBAFBFFAEAXEb3wL3JblytFeAAAAAElFTkSuQmCC"
+    try:
+        case = await payarc.disputes['add_document']('dis_MVB1AV901Rb1VAW0',
+                                                     {
+                                                         'DocumentDataBase64': document_base64,
+                                                         'text': 'It is the true true'
+                                                     })
+        print('Case submitted:', case)
+    except Exception as error:
+        print('Error detected:', error)
 # Run the example
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
@@ -619,4 +647,7 @@ if __name__ == "__main__":
     # asyncio.run(list_all_processing_merchants())
     # asyncio.run(create_campaign())
     # asyncio.run(get_campaign_by_id('cmp_o3**********86n5'))
-    asyncio.run(update_campaign())
+    # asyncio.run(update_campaign())
+    # asyncio.run(list_cases())
+    # asyncio.run(get_case('dis_MVB1AV901Rb1VAW0'))
+    asyncio.run(submit_case())

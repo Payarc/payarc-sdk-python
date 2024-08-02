@@ -967,6 +967,54 @@ async def cancel_subscription():
 asyncio.run(cancel_subscription())
 ```
 
+## Manage Disputes
+A dispute in the context of payment processing refers to a situation where a cardholder questions the validity of a transaction that appears on their statement. This can lead to a chargeback, where the transaction amount is reversed from the merchant's account and credited back to the cardholder. A cardholder sees a transaction on their account that they believe is incorrect or unauthorized. This could be due to various reasons such as fraudulent activity, billing errors, or dissatisfaction with a purchase. The cardholder contacts their issuing bank to dispute the transaction. They may provide details on why they believe the transaction is invalid. The issuing bank investigates the dispute. This may involve gathering information from the cardholder and reviewing the transaction details. The issuing bank communicates the dispute to the acquiring bank (the merchant's bank) through the card network (in your case Payarc). The merchant is then required to provide evidence to prove the validity of the transaction, such as receipts, shipping information, or communication with the customer. Based on the evidence provided by both the cardholder and the merchant, the issuing bank makes a decision. If the dispute is resolved in favor of the cardholder, a chargeback occurs, and the transaction amount is deducted from the merchant's account and credited to the cardholder. If resolved in favor of the merchant, the transaction stands.
 This documentation should help you understand how to use the Payarc SDK to manage charges and customers. If you have any questions, please refer to the Payarc API documentation or contact support.
 
+
+### Inquiry Dispute 
+The SDK provide a function to list your disputes. you can provide query parameters to specify the constraints over the function. when sent with no parameters it returns all disputes in the past one month
+```python
+async def list_cases():
+    try:
+        cases = await payarc.disputes['list']()
+        print('Cases:', cases)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(list_cases())
+```
+
+
+You can get details for a dispute by `retrieve` function. the identifier is returned by `list` function
+```python
+async def get_case(id):
+    try:
+        case = await payarc.disputes['retrieve'](id)
+        print('Case:', case)
+    except Exception as error:
+        print('Error detected:', error)
+
+asyncio.run(get_case('case_3aln*******8y8'))
+```
+### Submit Cases
+In order to resolve the dispute in your(merchant's) flavour, the merchant is  required to provide evidence to prove the validity of the transaction, such as receipts, shipping information, or communication with the customer. The SDK provides a function `add_document` that allows you to provide files and write messages to prove that you have rights to keep the mony for the transaction. First parameter of this function is the identifier of the dispute for which the evidence is. Next parameter is an object with following attributes:
+  - `DocumentDataBase64`: base46 representation of the files that will be used as evidence 
+  - `text`: short text to describe the evidence
+  - `mimeType`: type of the provided file
+  - `message`: Description of submitted case
+For more information for parameters and their attributes check documentation
+```python
+async def submit_case():
+    document_base64 = "iVBORw0KGgoAAAANSUhEUgAAAIUAAABsCAYAAABEkXF2AAAABHNCSVQICAgIfAhkiAAAAupJREFUeJzt3cFuEkEcx/E/001qUQ+E4NF48GB4BRM9+i59AE16ANlE4wv4Mp5MjI8gZ+ONEMJBAzaWwZsVf2VnstPZpfb7STh06ewu5JuFnSzQ8d5vDfiLa3sHcHiIAoIoIIgCgiggitwbWM/f2vniTe7NoIZ7Dz9Y0X0qy7NHYfbLtn6dfzOoYXPlUl4+IIgCooGXj10ngzM77p81vVmY2Y9vL+xi9Tn4f41HYVZYx3Wb3yws9oWBlw8IooAgCgiigCAKCKKAIAoIooAgCoikGU3nqpvy3qesPvv6+/2+LZfLpHUcsrrPD0cKCKKAIAoIooAgCgiigCAKCOecs7q3iJXbZDLZWVaWZfR4733lLbfZbBbchzZvvV4vy+PmSAFBFBBEAUEUEEQBQRQQRAFR5DzfD81FxMxVpMg9l3HT938fjhQQRAFBFBBEAUEUEEQBQRQQRe5z7SptnYejGkcKCKKAIAoIooAgCgiigCAKiKQoYj6bMB6Pd8aMRqPoz22kfCalzfmXm45nDoIoIIgCgiggiAKCKCCIAiJrFKnfTxHS9vdX5P7+ibZwpIAgCgiigCAKCKKAIAoIooDomNl2352hc+WY3+NYzyf2c345V3EyGNmdwevo8anbr3Lbfu/j+9fndrH69Ofv+48+WtF9JuM4UkAQBQRRQBAFBFFAEAUEUUBUfo9m6jUPzjl7eWr26vRyWVmW9u59GT2+Suo1B4vFImn8/4ojBQRRQBAFBFFAEAUEUUAQBUTHe7/3eorUeYrQ9RSprmP/UtZ/6OP/xfUUqI0oIIgCgiggiqY36Ddz25x/uZZ1PXmcNj60H6H1H/p4sV1F/VvjZx84HJx9IFrl733wexy3U/b3FO7ogR0dD7OsezqdVt4/HFZvNzQ+t9T9C40P6ty9erElfEKsbblnDHNrekYzFu8pIIgCgiggiAKCKCAqzz5Ccr+7T3133fb1DG0//ro4UkAQBQRRQBAFBFFAEAXEb3wL3JblytFeAAAAAElFTkSuQmCC"
+    try:
+        case = await payarc.disputes['add_document']('dis_MVB1AV901Rb1VAW0',
+                                                     {
+                                                         'DocumentDataBase64': document_base64,
+                                                         'text': 'It is the true true'
+                                                     })
+        print('Case submitted:', case)
+    except Exception as error:
+        print('Error detected:', error)
+```
 ## License [MIT](LICENSE)
