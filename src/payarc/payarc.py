@@ -5,6 +5,11 @@ import httpx
 import base64
 from functools import partial
 
+class PayarcConnectException(Exception):
+    def __init__(self, message, error_code=None):
+        super().__init__(message)
+        self.error_code = error_code
+
 
 class Payarc:
     url_map = {
@@ -21,6 +26,10 @@ class Payarc:
         self.base_url = self.url_map.get(base_url, base_url)
         self.base_url = f"{self.base_url}/v1/" if api_version == '/v1/' else f"{self.base_url}/v{api_version.strip('/')}/"
         self.bearer_token_agent = bearer_token_agent
+
+        self.payarc_connect_base_url = 'https://payarcconnectapi.curvpos.com' if base_url == 'prod' else 'https://payarcconnectapi.curvpos.dev'
+        self.payarc_connect_access_token = ""
+
 
         self.charges = {
             'create': self.__create_charge,
@@ -71,6 +80,9 @@ class Payarc:
             'list': self.__list_cases,
             'retrieve': self.__get_case,
             'add_document': self.__add_document_case
+        }
+        self.payarcConnect = {
+            'login': self.__login
         }
 
     async def __create_charge(self, obj, charge_data=None):
@@ -1035,6 +1047,44 @@ class Payarc:
             raise Exception(self.manage_error({'source': 'API Dispute documents add'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Dispute documents add'}, str(error)))
+        
+
+    async def __login(self):
+        seed = {'source': 'Payarc Connect Login'}
+        try:
+            async with httpx.AsyncClient() as client:
+                request_body = {
+                    "SecretKey": self.bearer_token
+                }
+                response = await client.post(
+                    f"{self.payarc_connect_base_url}/Login",
+                    json = request_body
+                )
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                try:
+                    bearer_token_info = data.get('BearerTokenInfo', None)
+                    access_token = bearer_token_info.get('AccessToken', None)
+                    self.payarc_connect_access_token = access_token                
+                except Exception as error:
+                        errorMessage = data.get('ErrorMessage', None)
+                        errorCode = data.get('ErrorCode', None)
+                        raise PayarcConnectException(errorMessage, errorCode)
+                return data 
+        except PayarcConnectException as error:
+            error_dict = {
+            'message': str(error),
+            'status_code': error.error_code
+            }
+            raise Exception(self.manage_error(seed, error_dict))
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error(seed, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error(seed, str(error)))        
+
+
 
     def add_object_id(self, obj):
         def handle_object(obj):
@@ -1120,6 +1170,7 @@ class Payarc:
         seed = seed or {}
 
         # Determine the error_json
+        error_code = None
         if hasattr(error, 'json'):
             try:
                 error_json = error.json()
@@ -1127,6 +1178,7 @@ class Payarc:
                 error_json = {}
         elif isinstance(error, dict):
             error_json = error
+            error_code = error.get('status_code', 'unKnown')
         else:
             error_json = {}
 
@@ -1136,10 +1188,15 @@ class Payarc:
             'type': 'TODO put here error type',
             'errorMessage': error_json.get('message', error) if isinstance(error, str) else error_json.get('message',
                                                                                                            'unKnown'),
-            'errorCode': getattr(error, 'status_code', 'unKnown'),
+            'errorCode': error_code if error_code is not None else getattr(error, 'status_code', 'unKnown'),
             'errorList': error_json.get('errors', 'unKnown'),
             'errorException': error_json.get('exception', 'unKnown'),
             'errorDataMessage': error_json.get('data', {}).get('message', 'unKnown')
         })
 
         return seed
+    
+    def createPayarcConnectError(self, seed, data):
+        # TODO implement the error handling
+        return self.manage_error(seed, data)
+
