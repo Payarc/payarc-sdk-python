@@ -11,7 +11,7 @@ payarc = Payarc (
 async def login():
     try:
         result = await payarc.payarcConnect['login']()
-        # print('Result:', result)
+        print('Result:', result)
     except Exception as error:
         print('Error detected:', error)
 
