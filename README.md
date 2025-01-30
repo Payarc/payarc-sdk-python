@@ -1017,4 +1017,146 @@ async def submit_case():
     except Exception as error:
         print('Error detected:', error)
 ```
+
+# Payarc Connect
+The following functionality will pertain only to user who are utilizing the Payarc Connect integration:
+
+### Login
+This function must be called and completed before any other functionality can be used. 
+```python
+    try:
+        result = await payarc.payarcConnect['login']()
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+
+### Sale
+Initiate a sale remotely on your PAX terminal
+
+| Parameter | Usage |
+| --- | --- |
+| TenderType | CREDIT, DEBIT |
+| ECRRefNum | Unique code for this transaction provided by the user. This code will be used later for **voids.** |
+| Amount | Amount to capture. Format is $$$$$$$CC |
+| DeviceSerialNo | Serial number of your PAX terminal |
+```python
+payarc.payarcConnect
+    try:
+        result = await payarc.payarcConnect['sale'](tenderType="CREDIT", ecrRefNum="REF1", amount='105', deviceSerialNo='1850406725')
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+
+### Void
+Initiate a void remotely on your PAX terminal
+
+| Parameter | Usage |
+| --- | --- |
+| PayarcTransactionId | Unique code of a previous transaction. Required to do a void. Charge ID on Payarc Portal. |
+| DeviceSerialNo | Serial number of your PAX terminal |
+```python
+    try:
+        result = await payarc.payarcConnect['void'](payarcTransactionId='nbDBOMBWnWXoWORX', deviceSerialNo='1850406725')
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+### Refund
+Initiate a refund remotely on your PAX terminal
+
+| Parameter | Usage |
+| --- | --- |
+| Amount | Amount to capture. Format is $$$$$$$CC |
+| PayarcTransactionId | Unique code of a previous transaction. Required to do a refund. Charge ID on Payarc Portal. |
+| DeviceSerialNo | Serial number of your PAX terminal |
+```python
+    try:
+        result = await payarc.payarcConnect['refund'](amount='50', payarcTransactionId='DMWbOLoWLWDXoOBX', deviceSerialNo='1850406725')
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+### Blind Credit
+Initiate a blind credit remotely on your PAX terminal
+
+| Parameter | Usage |
+| --- | --- |
+| ECRRefNum | Unique code for this transaction provided by the user. |
+| Amount | Amount to capture. Format is $$$$$$$CC |
+| Token | Required for Refund. Found in PaxResponse.ExtData |
+| ExpDate | Required for Refund. Found in PaxResponse.ExtData. Expiration date of card used in sale |
+| DeviceSerialNo | Serial number of your PAX terminal |
+```python
+    try:
+        result = await payarc.payarcConnect['blind_credit'](ecrRefNum="REF1", amount='50', token='IYmDAxNtma7g5228', expDate='0227', deviceSerialNo='1850406725')
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+### Auth
+Initiate an auth remotely on your PAX terminal
+
+| Parameter | Usage |
+| --- | --- |
+| ECRRefNum | Unique code for this transaction provided by the user |
+| Amount | Amount to capture. Format is $$$$$$$CC |
+| DeviceSerialNo | Serial number of your PAX terminal |
+```python
+    try:
+        result = await payarc.payarcConnect['auth'](ecrRefNum="REF12", amount='1000', deviceSerialNo='1850406725')
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+### Post Auth
+Initiate a post auth remotely on your PAX terminal
+
+| Parameter | Usage |
+| --- | --- |
+| ECRRefNum | Unique code for this transaction provided by the user |
+| OrigRefNum | This number is obtained from the paymentResponse object from an auth transaction. |
+| Amount | Amount to capture. Cannot exceed auth amount. If you need to exceed the auth amount, perform another sale and the auth will fall off. Format is $$$$$$$CC |
+| DeviceSerialNo | Serial number of your PAX terminal |
+```python
+    try:
+        result = await payarc.payarcConnect['post_auth'](ecrRefNum="REF12", origRefNum='10', amount='500', deviceSerialNo='1850406725')
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+### Last Transaction
+Returns the response object from the last transaction
+
+```python
+    try:
+        result = await payarc.payarcConnect['last_transaction'](deviceSerialNo='1850406725')
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+### Server Info
+ Returns the status of the server
+
+```python
+    try:
+        result = await payarc.payarcConnect['server_info']()
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+
+### Terminals
+Returns a list of registered terminal for merchant
+
+```python
+    try:
+        result = await payarc.payarcConnect['terminals']()
+        print('Result:', result)
+    except Exception as error:
+        print('Error detected:', error)
+```
+
+
 ## License [MIT](LICENSE)
