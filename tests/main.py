@@ -250,6 +250,14 @@ async def list_customer_with_limit(limit):
         print('Error detected:', error)
 
 
+async def delete_customer_by_id(id):
+    try:
+        customer = await payarc.customers['delete'](id)
+        print('Customer deleted successfully', customer)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def add_card_to_customer():
     try:
         customer = await payarc.customers['retrieve']('cus_jMNKVMPKnNxPVnDp')
@@ -484,6 +492,14 @@ async def update_plan_by_id(id):
               )
 
 
+async def delete_plan(id):
+    try:
+        plan = await payarc.billing['plan']['delete'](id)
+        print('Plan deleted:', plan)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def create_subscription():
     try:
         plans = await payarc.billing['plan']['list']({'search': 'iron'})
@@ -571,8 +587,8 @@ async def get_campaign_by_id(id):
 async def update_campaign():
     try:
         payload = {
-                      'notes': "new version of notes"
-                  }
+            'notes': "new version of notes"
+        }
 
         campaign = await payarc.split_campaigns['update']('cmp_o3maq0gklr78p6n5', payload)
         print('Campaign updated:', campaign)
@@ -607,6 +623,8 @@ async def submit_case():
         print('Case submitted:', case)
     except Exception as error:
         print('Error detected:', error)
+
+
 # Run the example
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
@@ -622,6 +640,7 @@ if __name__ == "__main__":
     # asyncio.run(update_customer('cus_DPNMVjx4AMNNVnjA'))
     # asyncio.run(update_customer_by_obj('cus_DPNMVjx4AMNNVnjA'))
     # asyncio.run(list_customer_with_limit(3))
+    asyncio.run(delete_customer_by_id('cus_xPpAV4DNjnpKVNjK'))
     # asyncio.run(add_card_to_customer())
     # asyncio.run(add_bank_account_to_customer())
     # asyncio.run(create_charge_by_card_id())
@@ -640,6 +659,7 @@ if __name__ == "__main__":
     # asyncio.run(remove_document_by_id())
     # asyncio.run(create_plan())
     # asyncio.run(update_plan())
+    # asyncio.run(delete_plan("plan_0d640ccc"))
     # asyncio.run(create_subscription())
     # asyncio.run(list_subscription())
     # asyncio.run(update_subscription())
@@ -650,4 +670,4 @@ if __name__ == "__main__":
     # asyncio.run(update_campaign())
     # asyncio.run(list_cases())
     # asyncio.run(get_case('dis_MVB1AV901Rb1VAW0'))
-    asyncio.run(submit_case())
+    # asyncio.run(submit_case())

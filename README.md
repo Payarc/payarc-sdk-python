@@ -85,6 +85,7 @@ SDK is build around object payarc. From this object you can access properties an
     retrieve - this function extract details for specific customer from database
     list - this function allows you to search amongst customers you had created. It is possible to search based on some criteria. See examples and documentation for more details  
     update - this function allows you to modify attributes of customer object.
+    delete - this function allows you to delete customer object.
 
 ### Object `payarc.applications`
 ##### Object `payarc.applications` is used by Agents and ISVs to manage candidate merchant when acquiring new customer. As such you can create, list, get details, and manage documents required in boarding process.  
@@ -528,7 +529,20 @@ async def add_bank_account_to_customer():
         
 asyncio.run(add_bank_account_to_customer())
 ```
+### Example: Delete Customer
 
+This example shows how to delete customer by id. See more details in API documentation
+```python
+async def delete_customer_by_id(id):
+    try:
+        customer = await payarc.customers['delete'](id)
+        print('Customer deleted successfully', customer)
+    except Exception as error:
+        print('Error detected:', error)
+        
+        
+asyncio.run(delete_customer_by_id('cus_x******KVNjK'))
+```
 ## Manage Candidate Merchants
 ### Create new Candidate Merchant
 In the process of connecting your clients with Payarc a selection is made based on Payarc's criteria. Process begins with filling information for the merchant and creating an entry in the database. Here is an example how this process could start

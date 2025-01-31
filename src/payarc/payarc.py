@@ -5,6 +5,7 @@ import httpx
 import base64
 from functools import partial
 
+
 class PayarcConnectException(Exception):
     def __init__(self, message, error_code=None):
         super().__init__(message)
@@ -30,7 +31,6 @@ class Payarc:
         self.payarc_connect_base_url = 'https://payarcconnectapi.curvpos.com' if base_url == 'prod' else 'https://payarcconnectapi.curvpos.dev'
         self.payarc_connect_access_token = ""
 
-
         self.charges = {
             'create': self.__create_charge,
             'retrieve': self.__get_charge,
@@ -42,6 +42,7 @@ class Payarc:
             'retrieve': self.__retrieve_customer,
             'list': self.__list_customers,
             'update': self.__update_customer,
+            'delete': self.__delete_customer,
         }
         self.applications = {
             'create': self.__add_lead,
@@ -92,7 +93,7 @@ class Payarc:
             'last_transaction': self.__last_transaction,
             'server_info': self.__server_info,
             'terminals': self.__terminals,
-            }
+        }
 
     async def __create_charge(self, obj, charge_data=None):
         try:
@@ -437,6 +438,27 @@ class Payarc:
         else:
             return self.add_object_id(response.json()['data'])
 
+    async def __delete_customer(self, customer):
+        if 'object_id' in customer:
+            customer = customer['object_id']
+        if customer.startswith('cus_'):
+            customer = customer[4:]
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.delete(
+                    f"{self.base_url}customers/{customer}",
+                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                )
+                if response.status_code == 204:
+                    return {}
+                response.raise_for_status()
+                return self.add_object_id(response.json().get('data', {}))
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error({'source': 'API delete customer'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API delete customer'}, str(error)))
+
     async def __add_lead(self, applicant):
         if 'agentId' in applicant and applicant['agentId'].startswith('usr_'):
             applicant['agentId'] = applicant['agentId'][4:]
@@ -534,6 +556,8 @@ class Payarc:
                     headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
                     json={'MerchantCode': applicant_id}
                 )
+                if response.status_code == 204:
+                    return {}
                 response.raise_for_status()
 
             return self.add_object_id(response.json()['data'])
@@ -585,6 +609,8 @@ class Payarc:
                     headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
                     json={'MerchantDocuments': [{'DocumentCode': document_id}]}
                 )
+                if response.status_code == 204:
+                    return {}
                 response.raise_for_status()
 
             return self.add_object_id(response.json())
@@ -757,6 +783,8 @@ class Payarc:
                     f"{self.base_url}plans/{data_id}",
                     headers={'Authorization': f"Bearer {self.bearer_token}"}
                 )
+                if response.status_code == 204:
+                    return {}
                 response.raise_for_status()
                 return self.add_object_id(response.json().get('data', {}))
         except httpx.HTTPError as error:
@@ -870,7 +898,8 @@ class Payarc:
                 response.raise_for_status()  # Raises an exception for HTTP error responses
                 return self.add_object_id(response.json()['data'])
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API Create campaign ...'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API Create campaign ...'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Create campaign ...'}, {'message': str(error)}))
 
@@ -885,7 +914,8 @@ class Payarc:
                 response.raise_for_status()  # Raises an exception for HTTP error responses
                 return self.add_object_id(response.json()['data'])
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get campaigns status'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get campaigns status'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get campaigns status'}, {'message': str(error)}))
 
@@ -905,7 +935,8 @@ class Payarc:
                 return self.add_object_id(response.json()['data'])
 
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get campaigns status'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get campaigns status'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get campaigns status'}, str(error)))
 
@@ -925,7 +956,8 @@ class Payarc:
                 return self.add_object_id(response.json()['data'])
 
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API update customer info'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API update customer info'}, str(error)))
 
@@ -946,7 +978,8 @@ class Payarc:
                     pagination = {}
                 return {'campaign_accounts': proc_merchants, 'pagination': pagination}
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get all merchants'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get all merchants'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all merchants'}, str(error)))
 
@@ -981,7 +1014,8 @@ class Payarc:
                 return {'cases': cases, 'pagination': pagination}
 
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get all disputes'},  error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get all disputes'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all disputes'}, str(error)))
 
@@ -1000,7 +1034,8 @@ class Payarc:
                 return self.add_object_id(response.json().get('primary_case', {}).get('data', {}))
 
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API get dispute details'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API get dispute details'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get dispute details'}, str(error)))
 
@@ -1053,10 +1088,10 @@ class Payarc:
 
                 return self.add_object_id(response.json())
         except httpx.HTTPError as error:
-            raise Exception(self.manage_error({'source': 'API Dispute documents add'}, error.response if error.response else {}))
+            raise Exception(
+                self.manage_error({'source': 'API Dispute documents add'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Dispute documents add'}, str(error)))
-        
 
     async def __login(self):
         seed = {'source': 'Payarc Connect Login'}
@@ -1067,28 +1102,28 @@ class Payarc:
                 }
                 response = await client.post(
                     f"{self.payarc_connect_base_url}/Login",
-                    json = request_body
+                    json=request_body
                 )
                 response.raise_for_status()
-                
+
                 data = response.json()
-                
+
                 try:
                     bearer_token_info = data.get('BearerTokenInfo', None)
                     access_token = bearer_token_info.get('AccessToken', None)
-                    self.payarc_connect_access_token = access_token                
+                    self.payarc_connect_access_token = access_token
                 except Exception as error:
-                        errorMessage = data.get('ErrorMessage', None)
-                        errorCode = data.get('ErrorCode', None)
-                        raise PayarcConnectException(errorMessage, errorCode)
-                return data 
+                    errorMessage = data.get('ErrorMessage', None)
+                    errorCode = data.get('ErrorCode', None)
+                    raise PayarcConnectException(errorMessage, errorCode)
+                return data
         except PayarcConnectException as error:
             raise Exception(self.manage_payarc_connect_error(seed, error))
         except httpx.HTTPError as error:
             raise Exception(self.manage_error(seed, error.response if error.response else {}))
         except Exception as error:
-            raise Exception(self.manage_error(seed, str(error)))        
-        
+            raise Exception(self.manage_error(seed, str(error)))
+
     async def __sale(self, tenderType, ecrRefNum, amount, deviceSerialNo):
         seed = {'source': 'Payarc Connect Sale'}
         request_body = {
@@ -1097,9 +1132,9 @@ class Payarc:
             "ECRRefNum": ecrRefNum,
             "Amount": amount,
             "DeviceSerialNo": deviceSerialNo
-            }
-        return await self.payarc_connect_transaction(seed, request_body)     
-            
+        }
+        return await self.payarc_connect_transaction(seed, request_body)
+
     async def __void(self, payarcTransactionId, deviceSerialNo):
         seed = {'source': 'Payarc Connect Void'}
         request_body = {
@@ -1107,8 +1142,8 @@ class Payarc:
             "PayarcTransactionId": payarcTransactionId,
             "DeviceSerialNo": deviceSerialNo
         }
-        return await self.payarc_connect_transaction(seed, request_body)     
-            
+        return await self.payarc_connect_transaction(seed, request_body)
+
     async def __refund(self, amount, payarcTransactionId, deviceSerialNo):
         seed = {'source': 'Payarc Connect Refund'}
         request_body = {
@@ -1117,8 +1152,8 @@ class Payarc:
             "PayarcTransactionId": payarcTransactionId,
             "DeviceSerialNo": deviceSerialNo
         }
-        return await self.payarc_connect_transaction(seed, request_body)     
-            
+        return await self.payarc_connect_transaction(seed, request_body)
+
     async def __blind_credit(self, ecrRefNum, amount, token, expDate, deviceSerialNo):
         seed = {'source': 'Payarc Connect Blind Credit'}
         request_body = {
@@ -1128,8 +1163,8 @@ class Payarc:
             "Token": token,
             "ExpDate": expDate,
             "DeviceSerialNo": deviceSerialNo
-        }   
-        return await self.payarc_connect_transaction(seed, request_body)     
+        }
+        return await self.payarc_connect_transaction(seed, request_body)
 
     async def __auth(self, ecrRefNum, amount, deviceSerialNo):
         seed = {'source': 'Payarc Connect Auth'}
@@ -1138,8 +1173,8 @@ class Payarc:
             "ECRRefNum": ecrRefNum,
             "Amount": amount,
             "DeviceSerialNo": deviceSerialNo
-        }  
-        return await self.payarc_connect_transaction(seed, request_body)     
+        }
+        return await self.payarc_connect_transaction(seed, request_body)
 
     async def __post_auth(self, ecrRefNum, origRefNum, amount, deviceSerialNo):
         seed = {'source': 'Payarc Connect Post Auth'}
@@ -1150,18 +1185,18 @@ class Payarc:
             "Amount": amount,
             "DeviceSerialNo": deviceSerialNo
         }
-        return await self.payarc_connect_transaction(seed, request_body)     
-    
+        return await self.payarc_connect_transaction(seed, request_body)
+
     async def __last_transaction(self, deviceSerialNo):
         seed = {'source': 'Payarc Connect Last Transaction'}
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.payarc_connect_base_url}/LastTransaction",
-                        headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"},
-                        params={
-                            "DeviceSerialNo": deviceSerialNo
-                        }
+                    headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"},
+                    params={
+                        "DeviceSerialNo": deviceSerialNo
+                    }
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -1175,27 +1210,27 @@ class Payarc:
         except httpx.HTTPError as error:
             raise Exception(self.manage_error(seed, error.response if error.response else {}))
         except Exception as error:
-            raise Exception(self.manage_error(seed, str(error)))       
-    
+            raise Exception(self.manage_error(seed, str(error)))
+
     async def __server_info(self):
         seed = {'source': 'Payarc Connect Server Info'}
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.payarc_connect_base_url}/ServerInfo",
-                    headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"})
+                                            headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"})
                 response.raise_for_status()
                 return response.json()
         except httpx.HTTPError as error:
             raise Exception(self.manage_error(seed, error.response if error.response else {}))
         except Exception as error:
-            raise Exception(self.manage_error(seed, str(error))) 
+            raise Exception(self.manage_error(seed, str(error)))
 
     async def __terminals(self):
         seed = {'source': 'Payarc Connect Terminals'}
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.payarc_connect_base_url}/Terminals",
-                    headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"})
+                                            headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"})
                 response.raise_for_status()
                 data = response.json()
                 errorCode = data.get('ErrorCode', None)
@@ -1208,9 +1243,7 @@ class Payarc:
         except httpx.HTTPError as error:
             raise Exception(self.manage_error(seed, error.response if error.response else {}))
         except Exception as error:
-            raise Exception(self.manage_error(seed, str(error)))       
-    
-
+            raise Exception(self.manage_error(seed, str(error)))
 
     def add_object_id(self, obj):
         def handle_object(obj):
@@ -1321,7 +1354,7 @@ class Payarc:
         })
 
         return seed
-    
+
     async def payarc_connect_transaction(self, seed, request_body):
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -1333,12 +1366,12 @@ class Payarc:
                 response.raise_for_status()
                 data = response.json()
                 errorCode = data.get('ErrorCode', None)
-                
+
                 if errorCode == 0:
                     return data
                 else:
                     raise PayarcConnectException(data.get('ErrorMessage', None), errorCode)
-                
+
         except PayarcConnectException as error:
             raise Exception(self.manage_payarc_connect_error(seed, error))
         except httpx.HTTPError as error:
