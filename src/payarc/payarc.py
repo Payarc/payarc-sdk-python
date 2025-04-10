@@ -95,6 +95,13 @@ class Payarc:
             'terminals': self.__terminals,
         }
 
+    def request_headers(self, token, **args):
+         return {
+            'Authorization': f"Bearer {token}",
+            'User-Agent': f"sdk-python/{self.version}",
+            **args
+         }
+
     async def __create_charge(self, obj, charge_data=None):
         try:
             charge_data = charge_data or obj
@@ -124,7 +131,7 @@ class Payarc:
                 charge_data['type'] = 'debit'
                 async with httpx.AsyncClient() as client:
                     response = await client.post(f"{self.base_url}achcharges", json=charge_data,
-                                                 headers={'Authorization': f"Bearer {self.bearer_token}"})
+                                                 headers=self.request_headers(self.bearer_token))
                     response.raise_for_status()
             elif charge_data.get('source', '').isdigit():
                 charge_data['card_number'] = charge_data['source']
@@ -140,7 +147,7 @@ class Payarc:
                 del charge_data['source']
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"{self.base_url}charges", json=charge_data,
-                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
+                                             headers=self.request_headers(self.bearer_token))
                 response.raise_for_status()
         except httpx.HTTPError as error:
             raise Exception(
@@ -157,14 +164,14 @@ class Payarc:
                     charge_id = charge_id[3:]
                     response = await client.get(
                         f"{self.base_url}charges/{charge_id}",
-                        headers={'Authorization': f"Bearer {self.bearer_token}"},
+                        headers=self.request_headers(self.bearer_token),
                         params={'include': 'transaction_metadata,extra_metadata'}
                     )
                 elif charge_id.startswith('ach_'):
                     charge_id = charge_id[4:]
                     response = await client.get(
                         f"{self.base_url}achcharges/{charge_id}",
-                        headers={'Authorization': f"Bearer {self.bearer_token}"},
+                        headers=self.request_headers(self.bearer_token),
                         params={'include': 'review'}
                     )
                 else:
@@ -192,7 +199,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}charges",
-                    headers={'Authorization': f"Bearer {self.bearer_token}"},
+                    headers=self.request_headers(self.bearer_token),
                     params={**{'limit': limit, 'page': page}, **search}
                 )
 
@@ -229,7 +236,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}charges/{charge_id}/refunds",
                     json=params,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
             response.raise_for_status()
 
@@ -267,7 +274,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}achcharges",
                     json=params,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
 
@@ -288,7 +295,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}customers",
                     json=customer_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
                 customer = self.add_object_id(response.json()['data'])
@@ -320,7 +327,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}customers/{customer_id}",
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
         except httpx.HTTPError as error:
@@ -340,7 +347,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}tokens",
                     json=token_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
         except httpx.HTTPError as error:
@@ -376,7 +383,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}bankaccounts",
                     json=acc_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
 
@@ -400,7 +407,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}customers",
-                    headers={'Authorization': f"Bearer {self.bearer_token}"},
+                    headers=self.request_headers(self.bearer_token),
                     params={'limit': limit, 'page': page, **constraint}
                 )
                 response.raise_for_status()
@@ -427,7 +434,7 @@ class Payarc:
                 response = await client.patch(
                     f"{self.base_url}customers/{customer}",
                     json=cust_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
         except httpx.HTTPError as error:
@@ -447,7 +454,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.delete(
                     f"{self.base_url}customers/{customer}",
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 if response.status_code == 204:
                     return {}
@@ -467,7 +474,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}agent-hub/apply/add-lead",
                     json=applicant,
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                    headers=self.request_headers(self.bearer_token_agent)
                 )
                 response.raise_for_status()
                 return self.add_object_id(response.json())
@@ -481,7 +488,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}agent-hub/apply-apps",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    headers=self.request_headers(self.bearer_token_agent),
                     params={
                         'limit': 0,
                         'is_archived': 0
@@ -512,7 +519,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}agent-hub/apply-apps/{applicant_id}",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    headers=self.request_headers(self.bearer_token_agent),
                     params={}
                 )
                 response.raise_for_status()
@@ -520,7 +527,7 @@ class Payarc:
 
                 docs_response = await client.get(
                     f"{self.base_url}agent-hub/apply-documents/{applicant_id}",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    headers=self.request_headers(self.bearer_token_agent),
                     params={'limit': 0}
                 )
                 docs_response.raise_for_status()
@@ -553,7 +560,7 @@ class Payarc:
                 response = await client.request(
                     "DELETE",
                     f"{self.base_url}agent-hub/apply/delete-lead",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    headers=self.request_headers(self.bearer_token_agent),
                     json={'MerchantCode': applicant_id}
                 )
                 if response.status_code == 204:
@@ -584,7 +591,7 @@ class Payarc:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"{self.base_url}agent-hub/apply/add-documents", json=data,
-                                             headers={'Authorization': f"Bearer {self.bearer_token_agent}"})
+                                             headers=self.request_headers(self.bearer_token_agent))
                 response.raise_for_status()
                 return self.add_object_id(response.json())
         except httpx.HTTPError as error:
@@ -606,7 +613,7 @@ class Payarc:
                 response = await client.request(
                     "DELETE",
                     f"{self.base_url}agent-hub/apply/delete-documents",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    headers=self.request_headers(self.bearer_token_agent),
                     json={'MerchantDocuments': [{'DocumentCode': document_id}]}
                 )
                 if response.status_code == 204:
@@ -635,7 +642,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}agent-hub/apply/submit-for-signature",
                     json={'MerchantCode': applicant_id},
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                    headers=self.request_headers(self.bearer_token_agent)
                 )
                 response.raise_for_status()
 
@@ -651,7 +658,7 @@ class Payarc:
             try:
                 response = await client.get(
                     f"{self.base_url}agent-hub/sub-agents",
-                    headers={"Authorization": f"Bearer {self.bearer_token_agent}"}
+                    headers=self.request_headers(self.bearer_token_agent)
                 )
                 response.raise_for_status()  # Ensure we raise an exception for HTTP errors
                 data = response.json()
@@ -685,7 +692,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.patch(f"{self.base_url}agent-hub/apply-apps/{data_id}",
                                               json=new_data,
-                                              headers={'Authorization': f"Bearer {self.bearer_token_agent}"})
+                                              headers=self.request_headers(self.bearer_token_agent))
                 response.raise_for_status()
                 if response.status_code == 200:
                     return await self.__retrieve_applicant(data_id)
@@ -703,7 +710,7 @@ class Payarc:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"{self.base_url}plans", json=data,
-                                             headers={'Authorization': f"Bearer {self.bearer_token}"})
+                                             headers=self.request_headers(self.bearer_token))
                 response.raise_for_status()
                 return self.add_object_id(response.json().get('data'))
         except httpx.HTTPError as error:
@@ -721,7 +728,7 @@ class Payarc:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.base_url}plans",
-                                            headers={'Authorization': f"Bearer {self.bearer_token}"}, params=params)
+                                            headers=self.request_headers(self.bearer_token), params=params)
                 response.raise_for_status()
                 data = response.json().get('data', {})
                 plans = [self.add_object_id(plan) for plan in data]
@@ -742,7 +749,7 @@ class Payarc:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.base_url}plans/{data}",
-                                            headers={'Authorization': f"Bearer {self.bearer_token}"})
+                                            headers=self.request_headers(self.bearer_token))
                 response.raise_for_status()
                 data = response.json().get('data', {})
                 return self.add_object_id(data)
@@ -762,7 +769,7 @@ class Payarc:
                 response = await client.patch(
                     f"{self.base_url}plans/{data_id}",
                     json=new_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
                 return self.add_object_id(response.json().get('data', {}))
@@ -781,7 +788,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.delete(
                     f"{self.base_url}plans/{data_id}",
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 if response.status_code == 204:
                     return {}
@@ -808,7 +815,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}subscriptions",
                     json=new_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
                 return self.add_object_id(response.json().get('data', {}))
@@ -827,7 +834,7 @@ class Payarc:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.base_url}subscriptions", params=params,
-                                            headers={'Authorization': f"Bearer {self.bearer_token}"})
+                                            headers=self.request_headers(self.bearer_token))
                 response.raise_for_status()
                 data = response.json().get('data', {})
                 subscriptions = [self.add_object_id(sub) for sub in data]
@@ -852,7 +859,7 @@ class Payarc:
                 response = await client.patch(
                     f"{self.base_url}subscriptions/{data_id}",
                     json=new_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token}'"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
                 data = response.json().get('data', {})
@@ -875,7 +882,7 @@ class Payarc:
                 response = await client.patch(
                     f"{self.base_url}subscriptions/{data_id}/cancel",
                     json={},
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
                 data = response.json().get('data', {})
@@ -893,7 +900,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}agent-hub/campaigns",
                     json=data,
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                    headers=self.request_headers(self.bearer_token_agent)
                 )
                 response.raise_for_status()  # Raises an exception for HTTP error responses
                 return self.add_object_id(response.json()['data'])
@@ -908,7 +915,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}agent-hub/campaigns",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    headers=self.request_headers(self.bearer_token_agent),
                     params={'limit': 0}
                 )
                 response.raise_for_status()  # Raises an exception for HTTP error responses
@@ -928,7 +935,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}agent-hub/campaigns/{key_id}",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"},
+                    headers=self.request_headers(self.bearer_token_agent),
                     params={'limit': 0}
                 )
                 response.raise_for_status()  # Ensure we handle HTTP errors
@@ -950,7 +957,7 @@ class Payarc:
                 response = await client.patch(
                     f"{self.base_url}agent-hub/campaigns/{data_id}",
                     json=new_data,
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                    headers=self.request_headers(self.bearer_token_agent)
                 )
                 response.raise_for_status()
                 return self.add_object_id(response.json()['data'])
@@ -966,7 +973,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}account/my-accounts",
-                    headers={'Authorization': f"Bearer {self.bearer_token_agent}"}
+                    headers=self.request_headers(self.bearer_token_agent)
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -1000,7 +1007,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}cases",
-                    headers={'Authorization': f"Bearer {self.bearer_token}"},
+                    headers=self.request_headers(self.bearer_token),
                     params=params
                 )
                 response.raise_for_status()
@@ -1027,7 +1034,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}cases/{data_id}",
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 response.raise_for_status()
                 # Return the transformed data
@@ -1075,14 +1082,14 @@ class Payarc:
                 response = await client.post(
                     f"{self.base_url}cases/{dispute_id}/evidence",
                     content=form_data_buffer,
-                    headers={'Authorization': f"Bearer {self.bearer_token}", **headers}
+                    headers=self.request_headers(self.bearer_token, **headers)
                 )
                 response.raise_for_status()
 
                 sub_response = await client.post(
                     f"{self.base_url}cases/{dispute_id}/submit",
                     json={'message': params.get('message', 'Case number#: xxxxxxxx, submitted by SDK')},
-                    headers={'Authorization': f"Bearer {self.bearer_token}"}
+                    headers=self.request_headers(self.bearer_token)
                 )
                 sub_response.raise_for_status()
 
@@ -1193,7 +1200,7 @@ class Payarc:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.payarc_connect_base_url}/LastTransaction",
-                    headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"},
+                    headers=self.request_headers(self.payarc_connect_access_token),
                     params={
                         "DeviceSerialNo": deviceSerialNo
                     }
@@ -1217,7 +1224,7 @@ class Payarc:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.payarc_connect_base_url}/ServerInfo",
-                                            headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"})
+                                            headers=self.request_headers(self.payarc_connect_access_token))
                 response.raise_for_status()
                 return response.json()
         except httpx.HTTPError as error:
@@ -1230,7 +1237,7 @@ class Payarc:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.payarc_connect_base_url}/Terminals",
-                                            headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"})
+                                            headers=self.request_headers(self.payarc_connect_access_token))
                 response.raise_for_status()
                 data = response.json()
                 errorCode = data.get('ErrorCode', None)
@@ -1361,7 +1368,7 @@ class Payarc:
                 response = await client.post(
                     f"{self.payarc_connect_base_url}/Transactions",
                     json=request_body,
-                    headers={'Authorization': f"Bearer {self.payarc_connect_access_token}"}
+                    headers=self.request_headers(self.payarc_connect_access_token)
                 )
                 response.raise_for_status()
                 data = response.json()
