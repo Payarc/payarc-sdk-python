@@ -77,6 +77,7 @@ SDK is build around object payarc. From this object you can access properties an
     create - this function will create a payment intent or charge accepting various configurations and parameters. See examples for some use cases. 
     retrieve - this function returns json object 'Charge' with details
     list - returns an object with attribute 'charges' a list of json object holding information for charges and object in attribute 'pagination'
+    agent.list - this function returns a list of charges for agent. It is possible to search based on some criteria. See examples and documentation for more details
     create_refund - function to perform a refund over existing charge
 
 ### Object ``payarc.customer``
@@ -275,7 +276,7 @@ asyncio.run(create_ach_charge_by_bank_account_details())
 
 ### Example: List Charges with No Constraints
 
-This example demonstrates how to list all charges without any constraints:
+This example demonstrates how to list all Merchant charges without any constraints:
 
 ```python
 async def list_charges(options=None):
@@ -286,6 +287,22 @@ async def list_charges(options=None):
         print('Error detected:', error)
 
 asyncio.run(list_charges({}))
+```
+### Example: List Agent Charges from date to date
+This example shows how to list charges for an agent within a specific date range:
+
+```python
+async def list_agent_charges(start_date, end_date):
+    try:
+        options = {
+            'start_date': start_date,
+            'end_date': end_date
+        }
+        charges = await payarc.charges['agent']['list'](options)
+        print(charges)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_agent_charges('2023-01-01', '2023-01-31'))
 ```
 
 ## Retrieving a Charge

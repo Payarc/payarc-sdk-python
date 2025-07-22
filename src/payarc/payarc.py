@@ -35,6 +35,9 @@ class Payarc:
             'create': self.__create_charge,
             'retrieve': self.__get_charge,
             'list': self.__list_charge,
+            'agent': {
+                'list': self.__list_agent_charges,
+            },
             'create_refund': self.__refund_charge
         }
         self.customers = {
@@ -989,6 +992,44 @@ class Payarc:
                 self.manage_error({'source': 'API get all merchants'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all merchants'}, str(error)))
+
+    async def __list_agent_charges(self, params=None):
+        def format_date(date):
+            return date.strftime('%Y-%m-%d')
+        try:
+            from_date = params.get('from_date') if params else None
+            to_date = params.get('to_date') if params else None
+
+            if not from_date or not to_date:
+                current_date = datetime.now()
+                from_date = format_date(current_date - timedelta(days=30))
+                to_date = format_date(current_date + timedelta(days=1))
+                params = {
+                    'from_date': from_date,
+                    'to_date': to_date
+                }
+            async with httpx.AsyncClient() as client:
+                url =  f"{self.base_url}alt/agent/charges"
+                response = await client.get(
+                    url,
+                    headers=self.request_headers(self.bearer_token_agent),
+                    params=params
+                )
+                response.raise_for_status()
+                data = response.json()
+                charges = [self.add_object_id(charge) for charge in data['data']]
+                if isinstance(data, dict):
+                    pagination = data.get('meta', {}).get('pagination', {})
+                    pagination.pop('links', None)
+                else:
+                    pagination = {}
+                return {'charges': charges, 'pagination': pagination}
+
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error({'source': 'API get all agent charges'}, error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API get all agent charges'}, str(error)))
 
     async def __list_cases(self, params=None):
         def format_date(date):
