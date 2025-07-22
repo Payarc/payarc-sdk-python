@@ -14,6 +14,8 @@ payarc = Payarc(
     version=os.getenv('PAYARC_VERSION')
 )
 
+print("Payarc SDK initialized with base URL:", payarc.bearer_token_agent)
+
 
 async def create_charge_example():
     charge_data = {
@@ -596,6 +598,15 @@ async def update_campaign():
         print('Error detected:', error)
 
 
+async def list_agent_charges(options=None):
+    try:
+        agent_charges = await payarc.charges['agent']['list'](
+           options)
+        print('Agent Charges:', agent_charges)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def list_cases():
     try:
         cases = await payarc.disputes['list']()
@@ -629,6 +640,7 @@ async def submit_case():
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
     # asyncio.run(list_charges({'limit': 50, 'page': 2}))
+    asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
     # asyncio.run(get_charge_by_id('ach_g9dDE7GDdeDG08eA'))
     # asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
     # asyncio.run(refund_ach_charge_by_obj('ach_g9dDE7GDdeDG08eA', {}))
@@ -640,7 +652,7 @@ if __name__ == "__main__":
     # asyncio.run(update_customer('cus_DPNMVjx4AMNNVnjA'))
     # asyncio.run(update_customer_by_obj('cus_DPNMVjx4AMNNVnjA'))
     # asyncio.run(list_customer_with_limit(3))
-    asyncio.run(delete_customer_by_id('cus_xPpAV4DNjnpKVNjK'))
+    # asyncio.run(delete_customer_by_id('cus_xPpAV4DNjnpKVNjK'))
     # asyncio.run(add_card_to_customer())
     # asyncio.run(add_bank_account_to_customer())
     # asyncio.run(create_charge_by_card_id())
