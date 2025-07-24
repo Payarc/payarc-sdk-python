@@ -91,6 +91,7 @@ SDK is build around object payarc. From this object you can access properties an
 ### Object `payarc.applications`
 ##### Object `payarc.applications` is used by Agents and ISVs to manage candidate merchant when acquiring new customer. As such you can create, list, get details, and manage documents required in boarding process.  
     create - this function add new candidate into database. See documentation for available attributes, possible values for some of them and which are mandatory. 
+    status - this function returns status of the candidate merchant (application). It is possible to check if it is in Submitted, Approved, Declined, Draft or other status.
     list - returns a list of application object representing future merchants. Use this function to find the interested identifier. 
     retrieve - based on identifier or an object returned from list function, this function will return details 
     delete - in case candidate merchant is no longer needed it will remove information for it.
@@ -642,6 +643,20 @@ async def create_candidate_in_behalf_of_other_agent():
         
 asyncio.run(create_candidate_in_behalf_of_other_agent())
 ```
+
+### Check Status of Candidate Merchant
+To check the status of a candidate merchant, you can use the `status` method. This will return the current status of the application, such as whether it is in a submitted, approved, or declined state.
+
+```python
+async def check_candidate_status(id):
+    try:
+        candidate = await payarc.applications['status'](id)
+        print('Candidate status:', candidate)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(check_candidate_status('appl_**********njA'))
+```
+
 ### Retrieve Information for Candidate Merchant
 To continue with onboarding process you might need to provide additional information or to inquiry existing leads. In the SDK  following functions exists: `list` and `retrieve`. 
 
@@ -666,7 +681,7 @@ async def get_candiate_merchant_by_id(id):
     except Exception as error:
         print('Error detected:', error)
    
-asyncio.run(get_candiate_merchant_by_id('app_**********njA'))
+asyncio.run(get_candiate_merchant_by_id('appl_**********njA'))
 ```
 Retrieve data for candidate merchant from a list inc documents
 ```python
@@ -695,7 +710,7 @@ async def update_candidate_merchant(id):
     except Exception as error:
         print('Error detected:', error)
         
-asyncio.run(update_candidate_merchant('app_**********njA'))
+asyncio.run(update_candidate_merchant('appl_**********njA'))
 ```
 
 ### Documents management
@@ -717,7 +732,7 @@ async def add_document_to_candidate_merchant(id):
     except Exception as error:
         print('Error detected:', error)
         
-asyncio.run(add_document_to_candidate_merchant('app_**********njA'))
+asyncio.run(add_document_to_candidate_merchant('appl_**********njA'))
 ```
 In this example we search for all candidate merchants and on the last added in the system we attach a document (Payarc logo) that will be used in on boarding process. See documentation for document attributes.
 In case document is no longer needed you can see those examples
