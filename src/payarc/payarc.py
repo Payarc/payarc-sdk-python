@@ -49,6 +49,7 @@ class Payarc:
         }
         self.applications = {
             'create': self.__add_lead,
+            'status': self.__lead_status,
             'list': self.__apply_apps,
             'retrieve': self.__retrieve_applicant,
             'update': self.__update_applicant,
@@ -485,6 +486,30 @@ class Payarc:
             raise Exception(self.manage_error({'source': 'API add lead'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API add lead'}, str(error)))
+
+    async def __lead_status(self, applicant):
+        try:
+            if isinstance(applicant, dict):
+                applicant_id = applicant.get('object_id', applicant)
+            else:
+                applicant_id = applicant
+            if applicant_id.startswith('appl_'):
+                applicant_id = applicant_id[5:]
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}agent-hub/apply/lead-status",
+                    json={'MerchantCode': applicant_id},
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+                applicant_data = response.json()
+                return self.add_object_id(applicant_data)
+
+        except httpx.HTTPError as http_error:
+            error_response = http_error.response if http_error.response else {}
+            raise Exception(self.manage_error({'source': 'API lead status'}, error_response))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API lead status'}, str(error)))
 
     async def __apply_apps(self):
         try:

@@ -302,7 +302,7 @@ async def create_candidate_merchant():
         merccandidate = {
             "Lead":
                 {
-                    "Industry": "cbd",
+                    "Industry": "business_ops_consutling",
                     "MerchantName": "My applications company",
                     "LegalName": "Best Co in w",
                     "ContactFirstName": "Joan",
@@ -393,6 +393,14 @@ async def list_inc_documents():
 async def get_candiate_merchant_by_id(id):
     try:
         candidate = await payarc.applications['retrieve'](id)
+        print('Candidate retrieved successfully:', candidate)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def get_lead_status(id):
+    try:
+        candidate = await payarc.applications['status'](id)
         print('Candidate retrieved successfully:', candidate)
     except Exception as error:
         print('Error detected:', error)
@@ -601,7 +609,7 @@ async def update_campaign():
 async def list_agent_charges(options=None):
     try:
         agent_charges = await payarc.charges['agent']['list'](
-           options)
+            options)
         print('Agent Charges:', agent_charges)
     except Exception as error:
         print('Error detected:', error)
@@ -640,7 +648,7 @@ async def submit_case():
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
     # asyncio.run(list_charges({'limit': 50, 'page': 2}))
-    asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
+    # asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
     # asyncio.run(get_charge_by_id('ach_g9dDE7GDdeDG08eA'))
     # asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
     # asyncio.run(refund_ach_charge_by_obj('ach_g9dDE7GDdeDG08eA', {}))
@@ -662,7 +670,8 @@ if __name__ == "__main__":
     # asyncio.run(create_ach_charge_by_bank_account_details())
     # asyncio.run(create_candidate_merchant())
     # asyncio.run(list_applications())
-    # asyncio.run(get_candiate_merchant_by_id('appl_3alndgy6xoep49y8'))
+    # asyncio.run(get_candiate_merchant_by_id('appl_9d6woe30xye3jz0q'))
+    asyncio.run(get_lead_status('appl_jq0vmgzpq5ela96w'))
     # asyncio.run(create_candidate_in_behalf_of_other_agent())
     # asyncio.run(list_inc_documents())
     # asyncio.run(update_candidate_merchant('appl_3alndgy6xoep49y8'))
