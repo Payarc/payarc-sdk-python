@@ -1,6 +1,8 @@
 import asyncio
 import json
 from datetime import datetime, timedelta
+from typing import Any, Dict, Optional, List
+from calendar import monthrange
 import httpx
 import base64
 from functools import partial
@@ -86,6 +88,10 @@ class Payarc:
             'retrieve': self.__get_case,
             'add_document': self.__add_document_case
         }
+        self.deposits = {
+            'list': self.__list_agent_deposits,
+            # 'retrieve': self.__get_merchant_deposit,
+        }
         self.payarcConnect = {
             'login': self.__login,
             'sale': self.__sale,
@@ -100,11 +106,11 @@ class Payarc:
         }
 
     def request_headers(self, token, **args):
-         return {
+        return {
             'Authorization': f"Bearer {token}",
             'User-Agent': f"sdk-python/{self.version}",
             **args
-         }
+        }
 
     async def __create_charge(self, obj, charge_data=None):
         try:
@@ -1021,6 +1027,7 @@ class Payarc:
     async def __list_agent_charges(self, params=None):
         def format_date(date):
             return date.strftime('%Y-%m-%d')
+
         try:
             from_date = params.get('from_date') if params else None
             to_date = params.get('to_date') if params else None
@@ -1034,7 +1041,7 @@ class Payarc:
                     'to_date': to_date
                 }
             async with httpx.AsyncClient() as client:
-                url =  f"{self.base_url}alt/agent/charges"
+                url = f"{self.base_url}alt/agent/charges"
                 response = await client.get(
                     url,
                     headers=self.request_headers(self.bearer_token_agent),
@@ -1055,6 +1062,72 @@ class Payarc:
                 self.manage_error({'source': 'API get all agent charges'}, error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all agent charges'}, str(error)))
+
+    async def __list_agent_deposits(self, params: Optional[Dict[str, Any]]):
+
+        try:
+            from_date = params.get("from_date") if params else None
+            to_date = params.get("to_date") if params else None
+            account_ids = params.get("account_ids", []) if params else []
+            mids = params.get("mids", []) if params else []
+
+            if not from_date or not to_date:
+                current_date = datetime.now()
+                year, month = current_date.year, current_date.month
+                from_date = f"{year}-{month:02d}-01"
+                last_day = monthrange(year, month)[1]
+                to_date = f"{year}-{month:02d}-{last_day:02d}"
+
+            try:
+                from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+                to_dt = datetime.strptime(to_date, "%Y-%m-%d")
+            except (TypeError, ValueError):
+                raise ValueError("from_date and to_date must be in format Y-m-d")
+            if to_dt < from_dt:
+                raise ValueError("to_date must be after or equal to from_date")
+
+            if not isinstance(account_ids, list):
+                account_ids = [account_ids]
+            account_ids = [str(x) for x in account_ids]
+            if not isinstance(mids, list):
+                mids = [mids]
+            mids = [str(x) for x in mids]
+
+            params = [
+                         ("from_date", "2023-11-01"),
+                         ("to_date", "2023-11-04"),
+                     ] + [("mids[]", mid) for mid in mids] + [("account_ids[]", acc) for acc in account_ids]
+
+            async with httpx.AsyncClient() as client:
+                url = f"{self.base_url}agent/deposit/summary"
+                response = await client.get(
+                    url,
+                    headers=self.request_headers(self.bearer_token_agent),
+                    params=params,  # ✅ multiple mids/account_ids handled correctly
+                )
+                response.raise_for_status()
+                data = response.json()
+
+                deposits = [self.add_object_id(deposit) for deposit in data["data"]]
+
+                pagination = {}
+                if isinstance(data, dict):
+                    pagination = data.get("meta", {}).get("pagination", {})
+                    pagination.pop("links", None)
+
+                return {"deposits": deposits, "pagination": pagination}
+
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error(
+                    {"source": "API get all agent deposits"},
+                    error.response if error.response else {},
+                )
+            )
+        except Exception as error:
+            raise Exception(
+                self.manage_error({"source": "API get all agent deposits"}, str(error))
+            )
 
     async def __list_cases(self, params=None):
         def format_date(date):
@@ -1368,6 +1441,9 @@ class Payarc:
                 elif obj.get('object') == 'Cases':
                     obj['object'] = 'Dispute'
                     obj['object_id'] = f"dis_{obj['id']}"
+                elif obj.get('object') == 'Account':
+                    obj['object'] = 'Merchant'
+                    obj['object_id'] = f"acc_{obj['id']}"
             elif 'MerchantCode' in obj:
                 obj['object_id'] = f"appl_{obj['MerchantCode']}"
                 obj['object'] = 'ApplyApp'

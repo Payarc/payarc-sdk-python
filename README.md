@@ -79,7 +79,9 @@ SDK is build around object payarc. From this object you can access properties an
     list - returns an object with attribute 'charges' a list of json object holding information for charges and object in attribute 'pagination'
     agent.list - this function returns a list of charges for agent. It is possible to search based on some criteria. See examples and documentation for more details
     create_refund - function to perform a refund over existing charge
-
+### Object `payarc.deposits`
+#### Object `payarc.deposits` is used to manipulate deposits in the system. This object has following functions: 
+    list - returns an object with attribute 'deposits' a list of json object holding information for deposits
 ### Object ``payarc.customer``
 #### Object `payarc.customer` is representing your customers with personal details, addresses and credit cards and/or bank accounts. Saved for future needs
     create - this function will create object stored in the database for a customer. it will provide identifier unique for each in order to identify and inquiry details. See examples and docs for more information
@@ -1062,6 +1064,26 @@ async def submit_case():
         print('Case submitted:', case)
     except Exception as error:
         print('Error detected:', error)
+```
+
+## List Agent Deposits
+This functionality is available only for Agent level users. It allows you to retrieve deposits made to your agent account by Payarc. This is useful for tracking payments and ensuring that all deposits are accounted for.
+
+```python
+async def list_agent_deposits(options=None):
+    try:
+        deposits = await payarc.deposits['list'](options)
+        print("Agent Deposits:")
+        pprint.pprint(deposits, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+        
+asyncio.run(asyncio.run(list_agent_deposits({
+        'from_date': '2023-11-01',
+        'to_date': '2023-11-04',
+        'account_ids': [], # Optional use to filter by specific account IDs
+        'mids': ['0*******817195'] # Optional use to filter by specific merchant MIDS
+    })))
 ```
 
 # Payarc Connect
