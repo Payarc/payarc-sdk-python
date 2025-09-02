@@ -1,5 +1,5 @@
 import asyncio
-import json
+import pprint
 
 from src.payarc.payarc import Payarc
 from dotenv import load_dotenv
@@ -623,6 +623,15 @@ async def list_cases():
         print('Error detected:', error)
 
 
+async def list_agent_deposits(options=None):
+    try:
+        deposits = await payarc.deposits['list'](options)
+        print("Agent Deposits:")
+        pprint.pprint(deposits, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def get_case(id):
     try:
         case = await payarc.disputes['retrieve'](id)
@@ -671,7 +680,7 @@ if __name__ == "__main__":
     # asyncio.run(create_candidate_merchant())
     # asyncio.run(list_applications())
     # asyncio.run(get_candiate_merchant_by_id('appl_9d6woe30xye3jz0q'))
-    asyncio.run(get_lead_status('appl_jq0vmgzpq5ela96w'))
+    # asyncio.run(get_lead_status('appl_jq0vmgzpq5ela96w'))
     # asyncio.run(create_candidate_in_behalf_of_other_agent())
     # asyncio.run(list_inc_documents())
     # asyncio.run(update_candidate_merchant('appl_3alndgy6xoep49y8'))
@@ -690,5 +699,9 @@ if __name__ == "__main__":
     # asyncio.run(get_campaign_by_id('cmp_o3**********86n5'))
     # asyncio.run(update_campaign())
     # asyncio.run(list_cases())
+    asyncio.run(list_agent_deposits({
+        'from_date': '2023-11-01',
+        'to_date': '2023-11-04'
+    }))
     # asyncio.run(get_case('dis_MVB1AV901Rb1VAW0'))
     # asyncio.run(submit_case())
