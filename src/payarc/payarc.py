@@ -42,6 +42,14 @@ class Payarc:
             },
             'create_refund': self.__refund_charge
         }
+        self.batches = {
+            # 'list': self.__list_batches, TODO: implement
+            # 'retrieve': self.__get_batch, TODO: implement
+            'agent': {
+                'list': self.__list_agent_batches,
+                'details': self.__get_agent_batch_details
+            }
+        }
         self.customers = {
             'create': self.__create_customer,
             'retrieve': self.__retrieve_customer,
@@ -1063,6 +1071,93 @@ class Payarc:
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API get all agent charges'}, str(error)))
 
+    async def __get_agent_batch_details(self, params: Optional[Dict[str, Any]]):
+        try:
+            batch_id = params.get("batch_reference_number") if params else None
+            if isinstance(batch_id, str) and batch_id.startswith('bat_'):
+                batch_id = batch_id[4:]
+            date = params.get("batch_date") if params else None
+            mid = params.get("mid") if params else None
+            async with httpx.AsyncClient() as client:
+                url = f"{self.base_url}agent/batch/reports/details/{mid}"
+                response = await client.get(
+                    url,
+                    params={"reference_number": batch_id, "date": date},
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+                data = response.json()
+
+                batch = self.add_object_id(data["data"])
+
+                return {"batch": batch}
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error(
+                    {"source": "API get agent batch details"},
+                    error.response if error.response else {},
+                )
+            )
+        except Exception as error:
+            raise Exception(
+                self.manage_error({"source": "API get agent batch details"}, str(error))
+            )
+
+    async def __list_agent_batches(self, params: Optional[Dict[str, Any]]):
+        try:
+            from_date = params.get("from_date") if params else None
+            to_date = params.get("to_date") if params else None
+            merchant_id = params.get("merchant_id") if params else None
+            if not from_date or not to_date:
+                current_date = datetime.now()
+                year, month = current_date.year, current_date.month
+                from_date = f"{year}-{month:02d}-01"
+                last_day = monthrange(year, month)[1]
+                to_date = f"{year}-{month:02d}-{last_day:02d}"
+
+            try:
+                from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+                to_dt = datetime.strptime(to_date, "%Y-%m-%d")
+            except (TypeError, ValueError):
+                raise ValueError("from_date and to_date must be in format Y-m-d")
+            if to_dt < from_dt:
+                raise ValueError("to_date must be after or equal to from_date")
+            # if not isinstance(merchant_id, int):
+            #     raise ValueError("merchant_id must be an integer")
+            params = [
+                ("from_date", from_date),
+                ("to_date", to_date),
+            ] + ([("merchant_id", str(merchant_id))] if merchant_id else [])
+            async with httpx.AsyncClient() as client:
+                url = f"{self.base_url}agent/batch/reports"
+                response = await client.get(
+                    url,
+                    headers=self.request_headers(self.bearer_token_agent),
+                    params=params
+                )
+                response.raise_for_status()
+                data = response.json()
+
+                batches = [self.add_object_id(batch) for batch in data["data"]]
+
+                pagination = {}
+                if isinstance(data, dict):
+                    pagination = data.get("meta", {}).get("pagination", {})
+                    pagination.pop("links", None)
+
+                return {"batches": batches, "pagination": pagination}
+        except httpx.HTTPError as error:
+            raise Exception(
+                self.manage_error(
+                    {"source": "API get all agent batches"},
+                    error.response if error.response else {},
+                )
+            )
+        except Exception as error:
+            raise Exception(
+                self.manage_error({"source": "API get all agent batches"}, str(error))
+            )
+
     async def __list_agent_deposits(self, params: Optional[Dict[str, Any]]):
 
         try:
@@ -1094,8 +1189,8 @@ class Payarc:
             mids = [str(x) for x in mids]
 
             params = [
-                         ("from_date", "2023-11-01"),
-                         ("to_date", "2023-11-04"),
+                         ("from_date", from_date),
+                         ("to_date", to_date),
                      ] + [("mids[]", mid) for mid in mids] + [("account_ids[]", acc) for acc in account_ids]
 
             async with httpx.AsyncClient() as client:
@@ -1462,8 +1557,17 @@ class Payarc:
                 obj['update'] = partial(self.__update_plan, obj)
                 obj['delete'] = partial(self.__delete_plan, obj)
                 obj['create_subscription'] = partial(self.__create_subscription, obj)
+            elif 'Batch_Reference_Number' in obj:
+                ref = obj.get('Batch_Reference_Number')
+                obj.update({
+                    'batch_reference_number': f"bat_{ref}",
+                    'object': 'Batch',
+                    'details': partial(self.__get_agent_batch_details, obj),
+                    'mid': obj.get('Merchant_Account_Number'),
+                    'batch_date': obj.pop('Settlement_Date', None)
+                })
 
-            for key in obj:
+        for key in obj:
                 if isinstance(obj[key], dict):
                     handle_object(obj[key])
                 elif isinstance(obj[key], list):
