@@ -79,6 +79,10 @@ SDK is build around object payarc. From this object you can access properties an
     list - returns an object with attribute 'charges' a list of json object holding information for charges and object in attribute 'pagination'
     agent.list - this function returns a list of charges for agent. It is possible to search based on some criteria. See examples and documentation for more details
     create_refund - function to perform a refund over existing charge
+### Object `payarc.batches`
+#### Object `payarc.batches` is used to manipulate batch reporting in the system. This object has following functions: 
+    list - returns an object with attribute 'batches' a list of json object holding information for batches
+    retrieve - this function returns json object 'Batch' with details
 ### Object `payarc.deposits`
 #### Object `payarc.deposits` is used to manipulate deposits in the system. This object has following functions: 
     list - returns an object with attribute 'deposits' a list of json object holding information for deposits
@@ -399,6 +403,71 @@ async def refund_charge(id, options=None):
         print('Error detected:', error)
         
  asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
+```
+## Managing Batches
+#### Batch reporting is available for agents only. To use this functionality you need to provide agent token on the constructor of the SDK.
+### Example: List Batches with No Constraints
+This example demonstrates how to list all batches without any constraints:
+> [!NOTE] 
+> When no date range is passed, the current month is used by default.
+```python
+async def list_agent_batches(options=None):
+    try:
+        batches = await payarc.batches['agent']['list'](options)
+        print("Agent Batches:")
+        pprint.pprint(batches, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_agent_batches({}))
+```
+### Example: List Batches with Date Range
+This example shows how to list batches within a specific date range:
+```python
+async def list_agent_batches_with_date_range(start_date, end_date):
+    try:
+        options = {
+            'from_date': start_date,
+            'to_date': end_date
+        }
+        batches = await payarc.batches['agent']['list'](options)
+        print("Agent Batches:")
+        pprint.pprint(batches, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_agent_batches_with_date_range('2023-01-01', '2023-01-31'))
+```
+### Example: Retrieve a Batch
+This example shows how to retrieve a specific batch by its REFERENCE NUMBER, MID and DATE: (all three are mandatory)
+```python
+async def get_batch_details(options=None):
+    try:
+        batch = await payarc.batches['agent']['details'](options)
+        print("Batch Details:")
+        pprint.pprint(batch, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(get_batch_details({
+    'batch_reference_number': '20230930-000001',
+    'mid': '123456789012345',
+    'batch_date': '2023-09-30'
+}))
+```
+### Example: Retrieve a Batch by Object
+This example shows how to retrieve a specific batch by its object:
+```python
+async def get_batch_details_by_obj(options=None):
+    try:
+        batches = await payarc.batches['agent']['list'](options)
+        batch = batches['batches'][1]
+        details = await batch['details']()
+        print("Batch Details:")
+        pprint.pprint(details, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(get_batch_details_by_obj({
+    'from_date': '2025-05-30',
+    'to_date': '2025-05-30'
+}))
 ```
 
 ## Managing Customers

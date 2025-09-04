@@ -632,6 +632,35 @@ async def list_agent_deposits(options=None):
         print('Error detected:', error)
 
 
+async def list_agent_batches(options=None):
+    try:
+        batches = await payarc.batches['agent']['list'](options)
+        print("Agent Batches:")
+        pprint.pprint(batches, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def get_batch_details(options=None):
+    try:
+        batch = await payarc.batches['agent']['details'](options)
+        print("Batch Details:")
+        pprint.pprint(batch, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def get_batch_details_by_obj(options=None):
+    try:
+        batches = await payarc.batches['agent']['list'](options)
+        batch = batches['batches'][1]
+        details = await batch['details']()
+        print("Batch Details:")
+        pprint.pprint(details, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def get_case(id):
     try:
         case = await payarc.disputes['retrieve'](id)
@@ -699,9 +728,22 @@ if __name__ == "__main__":
     # asyncio.run(get_campaign_by_id('cmp_o3**********86n5'))
     # asyncio.run(update_campaign())
     # asyncio.run(list_cases())
-    asyncio.run(list_agent_deposits({
-        'from_date': '2023-11-01',
-        'to_date': '2023-11-04'
+    # asyncio.run(list_agent_deposits({
+    #     'from_date': '2024-11-01',
+    #     'to_date': '2024-11-04'
+    # }))
+    # asyncio.run(list_agent_batches({
+    #     'from_date': '2025-05-30',
+    #     'to_date': '2025-05-30'
+    # }))
+    asyncio.run(get_batch_details({
+        # 'batch_reference_number': 'bat_90042693274',
+        'mid': '0671900000038430',
+        'batch_date': '2025-05-30'
     }))
+    # asyncio.run(get_batch_details_by_obj({
+    #     'from_date': '2025-05-30',
+    #     'to_date': '2025-05-30'
+    # }))
     # asyncio.run(get_case('dis_MVB1AV901Rb1VAW0'))
     # asyncio.run(submit_case())
