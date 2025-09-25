@@ -19,7 +19,7 @@ print("Payarc SDK initialized with base URL:", payarc.bearer_token_agent)
 
 async def create_charge_example():
     charge_data = {
-        "amount": 1785,
+        "amount": 1782,
         "currency": "usd",
         "source": {
             "card_number": "4012000098765439",
@@ -77,6 +77,80 @@ async def create_charge_by_customer_id():
     try:
         charge = await payarc.charges['create'](charge_data)
         print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def create_instructional_funding_charge():
+    charge_data = {
+        "amount": 120,
+        "currency": "usd",
+        "source": {
+            "card_number": "4012000098765439",
+            "exp_month": "03",
+            "exp_year": "2025",
+            "splits": [
+                {
+                    "mid": "0709900000109900",
+                    "amount": 20,
+                    "description": "Application fee"
+                },
+                {
+                    "mid": "0609900000551514",
+                    "amount": 100,
+                    "description": "Platform fee"
+                }
+            ]
+        }
+    }
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def adjust_splits_by_charge_id(id):
+    splits_data = {
+        "splits": [
+            {
+                "mid": "0709900000109900",
+                "amount": 30,
+                "description": "Application fee updated"
+            },
+            {
+                "mid": "0609900000551514",
+                "amount": 90,
+                "description": "Platform fee updated"
+            }
+        ]
+    }
+    try:
+        charge = await payarc.charges['adjust_splits'](id, splits_data)
+        print('Success, the charge with adjusted splits is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def adjust_splits_by_charge_obj():
+    try:
+        charge = await payarc.charges['retrieve']('ch_WBMROoBWnnnDbOyn')
+        splits_data = {
+            "splits": [
+                {
+                    "mid": "0709900000109900",
+                    "amount": 45,
+                    "description": "Application fee updated"
+                },
+                {
+                    "mid": "0609900000551514",
+                    "amount": 45,
+                    "description": "Platform fee updated"
+                }
+            ]
+        }
+        updated_charge = await charge['adjust_splits'](splits_data)
+        print('Success, the charge with adjusted splits is:', updated_charge)
     except Exception as error:
         print('Error detected:', error)
 
@@ -685,9 +759,12 @@ async def submit_case():
 # Run the example
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
-    # asyncio.run(list_charges({'limit': 50, 'page': 2}))
+    # asyncio.run(create_instructional_funding_charge())
+    # asyncio.run(adjust_splits_by_charge_id('ch_WBMROoBWnnnDbOyn'))
+    asyncio.run(adjust_splits_by_charge_obj())
+    # asyncio.run(list_charges({'limit': 50, 'page': 1}))
     # asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
-    # asyncio.run(get_charge_by_id('ach_g9dDE7GDdeDG08eA'))
+    # asyncio.run(get_charge_by_id('ch_WBMROoBWnnnDbOyn'))
     # asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
     # asyncio.run(refund_ach_charge_by_obj('ach_g9dDE7GDdeDG08eA', {}))
     # asyncio.run(refund_charge_by_obj('ch_MnBROWLXBBXnoOWL',
@@ -736,11 +813,11 @@ if __name__ == "__main__":
     #     'from_date': '2025-05-30',
     #     'to_date': '2025-05-30'
     # }))
-    asyncio.run(get_batch_details({
-        # 'batch_reference_number': 'bat_90042693274',
-        'mid': '0671900000038430',
-        'batch_date': '2025-05-30'
-    }))
+    # asyncio.run(get_batch_details({
+    #     # 'batch_reference_number': 'bat_90042693274',
+    #     'mid': '0671900000038430',
+    #     'batch_date': '2025-05-30'
+    # }))
     # asyncio.run(get_batch_details_by_obj({
     #     'from_date': '2025-05-30',
     #     'to_date': '2025-05-30'
