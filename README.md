@@ -79,6 +79,7 @@ SDK is build around object payarc. From this object you can access properties an
     list - returns an object with attribute 'charges' a list of json object holding information for charges and object in attribute 'pagination'
     agent.list - this function returns a list of charges for agent. It is possible to search based on some criteria. See examples and documentation for more details
     create_refund - function to perform a refund over existing charge
+    adjust_splits - function to modify splits for existing charge (Only for Merchants configured with instructional funding)
 ### Object `payarc.batches`
 #### Object `payarc.batches` is used to manipulate batch reporting in the system. This object has following functions: 
     list - returns an object with attribute 'batches' a list of json object holding information for batches
@@ -278,6 +279,90 @@ async def create_ach_charge_by_bank_account_details():
 asyncio.run(create_ach_charge_by_bank_account_details())
 ```
 
+### Example: Create a Charge with Split (Instructional Funding)
+This example demonstrates how to create a charge with split instructions.
+
+Merchants configured with instructional funding are required to include the splits array in the request payload.
+
+At least one valid split instruction must be provided — otherwise, the request may result in errors and could delay funding of the transaction.
+```python
+async def create_instructional_funding_charge():
+     charge_data = {
+        "amount": 120,
+        "currency": "usd",
+        "source": {
+            "card_number": "4012*********5439",
+            "exp_month": "03",
+            "exp_year": "2025",
+            "splits": [
+                {
+                    "mid": "070990*******900",
+                    "amount": 20,
+                    "description": "Application fee"
+                },
+                {
+                    "mid": "06099*********14",
+                    "amount": 100,
+                    "description": "Platform fee"
+                }
+            ]
+        }
+    }
+    try:
+        charge = await payarc.charges['create'](charge_data)
+        print('Success, the charge is:', charge)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(create_instructional_funding_charge())
+```
+### Example: Adjust Splits for Charge with Instructional Funding
+This example demonstrates how to adjust splits for an existing charge with instructional funding by charge id.
+```python
+async def adjust_splits_for_charge(id):
+    try:
+        adjusted_charge = await payarc.charges['adjust_splits'](id, {
+            "splits": [
+                {
+                    "mid": "070990*******900",
+                    "amount": 30,
+                    "description": "Application fee updated"
+                },
+                {
+                    "mid": "06099*********14",
+                    "amount": 90,
+                    "description": "Platform fee updated"
+                }
+            ]
+        })
+        print('Charge splits adjusted successfully:', adjusted_charge)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(adjust_splits_for_charge('ch_M*********noOWL'))
+```
+This example demonstrates how to adjust splits for an existing charge with instructional funding by charge object.
+```python
+async def adjust_splits_by_charge_obj(id):
+    try:
+        charge = await payarc.charges['retrieve'](id)
+        adjusted_charge = await charge['adjust_splits']({
+            "splits": [
+                {
+                    "mid": "070990*******900",
+                    "amount": 30,
+                    "description": "Application fee updated"
+                },
+                {
+                    "mid": "06099*********14",
+                    "amount": 90,
+                    "description": "Platform fee updated"
+                }
+            ]
+        })
+        print('Charge splits adjusted successfully:', adjusted_charge)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(adjust_splits_by_charge_obj('ch_M*********noOWL'))
+```
 
 ## Listing Charges
 

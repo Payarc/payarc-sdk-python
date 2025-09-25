@@ -40,7 +40,8 @@ class Payarc:
             'agent': {
                 'list': self.__list_agent_charges,
             },
-            'create_refund': self.__refund_charge
+            'create_refund': self.__refund_charge,
+            'adjust_splits': self.__adjust_charge_splits,  # TODO: implement
         }
         self.batches = {
             # 'list': self.__list_batches, TODO: implement
@@ -265,6 +266,30 @@ class Payarc:
             raise Exception(self.manage_error({'source': 'API List charges'}, str(error)))
         else:
             return self.add_object_id(response.json().get('data')) if not ach_regular else response
+
+    async def __adjust_charge_splits(self, charge, charge_data=None):
+        if isinstance(charge, dict):
+            charge_id = charge.get('object_id', charge)
+        else:
+            charge_id = charge
+
+        if charge_id.startswith('ch_'):
+            charge_id = charge_id[3:]
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{self.base_url}charges/{charge_id}/overwrite-split",
+                    json=charge_data,
+                    headers=self.request_headers(self.bearer_token)
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Adjust Charge Splits'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Adjust Charge Splits'}, str(error)))
+        else:
+            return self.add_object_id(response.json().get('data'))
 
     async def __refund_ach_charge(self, charge, params=None):
         if params is None:
@@ -1125,9 +1150,9 @@ class Payarc:
             # if not isinstance(merchant_id, int):
             #     raise ValueError("merchant_id must be an integer")
             params = [
-                ("from_date", from_date),
-                ("to_date", to_date),
-            ] + ([("merchant_id", str(merchant_id))] if merchant_id else [])
+                         ("from_date", from_date),
+                         ("to_date", to_date),
+                     ] + ([("merchant_id", str(merchant_id))] if merchant_id else [])
             async with httpx.AsyncClient() as client:
                 url = f"{self.base_url}agent/batch/reports"
                 response = await client.get(
@@ -1489,9 +1514,12 @@ class Payarc:
     def add_object_id(self, obj):
         def handle_object(obj):
             if 'id' in obj or 'customer_id' in obj:
-                if obj.get('object') == 'Charge':
-                    obj['object_id'] = f"ch_{obj['id']}"
+                if obj.get('object') in ('Charge', 'ACHCharge'):
+                    prefix = 'ch_' if obj['object'] == 'Charge' else 'ach_'
+                    obj['object_id'] = f"{prefix}{obj['id']}"
                     obj['create_refund'] = partial(self.__refund_charge, obj)
+                    if obj.get('splits') and obj['splits'].get('data'):
+                        obj['adjust_splits'] = partial(self.__adjust_charge_splits, obj)
                 elif obj.get('object') == 'customer':
                     obj['object_id'] = f"cus_{obj['customer_id']}"
                     obj['update'] = partial(self.__update_customer, obj)
@@ -1509,9 +1537,8 @@ class Payarc:
                     obj['object_id'] = f"card_{obj['id']}"
                 elif obj.get('object') == 'BankAccount':
                     obj['object_id'] = f"bnk_{obj['id']}"
-                elif obj.get('object') == 'ACHCharge':
-                    obj['object_id'] = f"ach_{obj['id']}"
-                    obj['create_refund'] = partial(self.__refund_charge, obj)
+                elif obj.get('object') == 'ChargeSplit':
+                    obj['object_id'] = f"chs_{obj['id']}"
                 elif obj.get('object') == 'ApplyApp':
                     obj['object_id'] = f"appl_{obj['id']}"
                     obj['retrieve'] = partial(self.__retrieve_applicant, obj)
@@ -1567,13 +1594,18 @@ class Payarc:
                     'batch_date': obj.pop('Settlement_Date', None)
                 })
 
-        for key in obj:
-                if isinstance(obj[key], dict):
-                    handle_object(obj[key])
-                elif isinstance(obj[key], list):
-                    for item in obj[key]:
+        for key, value in list(obj.items()):
+            if isinstance(value, dict):
+                if 'data' in value and isinstance(value['data'], list):
+                    for item in value['data']:
                         if isinstance(item, dict):
                             handle_object(item)
+                else:
+                    handle_object(value)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        handle_object(item)
 
         handle_object(obj)
         return obj
