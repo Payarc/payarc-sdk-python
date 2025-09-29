@@ -80,6 +80,7 @@ SDK is build around object payarc. From this object you can access properties an
     agent.list - this function returns a list of charges for agent. It is possible to search based on some criteria. See examples and documentation for more details
     create_refund - function to perform a refund over existing charge
     adjust_splits - function to modify splits for existing charge (Only for Merchants configured with instructional funding)
+    list_splits - retrieves a list of instructional funding allocations (as ChargeSplit objects) associated with a specific merchant account.
 ### Object `payarc.batches`
 #### Object `payarc.batches` is used to manipulate batch reporting in the system. This object has following functions: 
     list - returns an object with attribute 'batches' a list of json object holding information for batches
@@ -362,6 +363,19 @@ async def adjust_splits_by_charge_obj(id):
     except Exception as error:
         print('Error detected:', error)
 asyncio.run(adjust_splits_by_charge_obj('ch_M*********noOWL'))
+```
+## Listing Splits for Charge with Instructional Funding
+This example demonstrates how to list splits of instructional funding allocations (as ChargeSplit objects) associated with a specific merchant account.
+It provides a detailed breakdown of the amount or percentage assigned to each allocation, along with its status and timestamps.
+
+```python
+async def list_charge_splits(params=None):
+    try:
+        splits = await payarc.charges['list_splits'](params)
+        pprint.pprint(splits)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_charge_splits({'limit': 25, 'page': 2}))
 ```
 
 ## Listing Charges

@@ -41,7 +41,8 @@ class Payarc:
                 'list': self.__list_agent_charges,
             },
             'create_refund': self.__refund_charge,
-            'adjust_splits': self.__adjust_charge_splits,  # TODO: implement
+            'adjust_splits': self.__adjust_charge_splits,
+            'list_splits': self.__list_charge_splits
         }
         self.batches = {
             # 'list': self.__list_batches, TODO: implement
@@ -290,6 +291,32 @@ class Payarc:
             raise Exception(self.manage_error({'source': 'API Adjust Charge Splits'}, str(error)))
         else:
             return self.add_object_id(response.json().get('data'))
+
+    async def __list_charge_splits(self, search_data):
+        if search_data is None:
+            search_data = {}
+
+        limit = search_data.get('limit', 25)
+        page = search_data.get('page', 1)
+        search = search_data.get('search', {})
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}instructional_funding",
+                    headers=self.request_headers(self.bearer_token),
+                    params={**{'limit': limit, 'page': page}, **search}
+                )
+                response.raise_for_status()
+                response_data = response.json()
+                charge_splits = [self.add_object_id(charge_split) for charge_split in response_data['data']]
+                pagination = response_data.get('meta', {}).get('pagination', {})
+                pagination.pop('links', None)
+                return {'charge_splits': charge_splits, 'pagination': pagination}
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API List Charge Splits'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API List Charge Splits'}, str(error)))
 
     async def __refund_ach_charge(self, charge, params=None):
         if params is None:
