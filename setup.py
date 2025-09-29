@@ -6,7 +6,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="payarc",
-    version="1.7.4",
+    version="1.7.6",
     description="Payarc Python SDK",
     long_description=long_description,
     long_description_content_type="text/markdown",
