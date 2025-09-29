@@ -140,6 +140,18 @@ async def list_charge_splits(params=None):
         print('Error detected:', error)
 
 
+async def create_charge_split():
+    split_data = {
+        "mid": "0709900000098856",
+        "amount": 30,
+        "description": "Application fee created"
+    }
+    try:
+        split = await payarc.charges['create_split'](split_data)
+        print('Success, the new split is:', split)
+    except Exception as error:
+        print('Error detected:', error)
+
 async def adjust_splits_by_charge_obj():
     try:
         charge = await payarc.charges['retrieve']('ch_WBMROoBWnnnDbOyn')
@@ -770,7 +782,8 @@ if __name__ == "__main__":
     # asyncio.run(create_instructional_funding_charge())
     # asyncio.run(adjust_splits_by_charge_id('ch_WBMROoBWnnnDbOyn'))
     # asyncio.run(adjust_splits_by_charge_obj())
-    asyncio.run(list_charge_splits({'limit': 25, 'page': 2}))
+    # asyncio.run(list_charge_splits({'limit': 25, 'page': 2}))
+    asyncio.run(create_charge_split())
     # asyncio.run(list_charges({'limit': 50, 'page': 1}))
     # asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
     # asyncio.run(get_charge_by_id('ch_WBMROoBWnnnDbOyn'))
