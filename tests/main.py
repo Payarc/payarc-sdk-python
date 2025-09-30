@@ -205,6 +205,59 @@ async def refund_ach_charge_by_obj(id, options=None):
         print('Error detected:', error)
 
 
+async def create_webhook_example():
+    webhook_data = {
+        # 'key': 'merchant.onboarded.webhook',
+        'key': 'lead.category.updated.webhook',
+        'value': 12,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['create'](webhook_data)
+        print('Webhook created:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_webhook_example():
+    webhook_data = {
+        'key': 'merchant.onboarded.webhook',
+        'value': 1,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['update'](webhook_data)
+        print('Webhook updated:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_webhook_example_by_obj():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        webhook = webhooks['webhooks'][1] if webhooks['webhooks'] else None
+        if webhook:
+            webhook['value'] = 13
+            updated_webhook = await webhook['update']()
+            print('Webhook updated:', updated_webhook)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def list_webhooks_example():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        print('Webhooks list:', webhooks)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def delete_webhook_example():
+    try:
+        response = await payarc.user_settings['agent']['webhooks']['delete']('merchant.onboarded.webhook')
+        print('Webhook deleted:', response)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def create_customer_example():
     customer_data = {
         "email": "anon+50@example.com",
@@ -770,7 +823,12 @@ if __name__ == "__main__":
     # asyncio.run(create_instructional_funding_charge())
     # asyncio.run(adjust_splits_by_charge_id('ch_WBMROoBWnnnDbOyn'))
     # asyncio.run(adjust_splits_by_charge_obj())
-    asyncio.run(list_charge_splits({'limit': 25, 'page': 2}))
+    # asyncio.run(list_charge_splits({'limit': 25, 'page': 2}))
+    asyncio.run(create_webhook_example())
+    # asyncio.run(update_webhook_example())
+    # asyncio.run(update_webhook_example_by_obj())
+    # asyncio.run(list_webhooks_example())
+    asyncio.run(delete_webhook_example())
     # asyncio.run(list_charges({'limit': 50, 'page': 1}))
     # asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
     # asyncio.run(get_charge_by_id('ch_WBMROoBWnnnDbOyn'))

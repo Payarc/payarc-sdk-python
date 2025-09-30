@@ -81,6 +81,12 @@ SDK is build around object payarc. From this object you can access properties an
     create_refund - function to perform a refund over existing charge
     adjust_splits - function to modify splits for existing charge (Only for Merchants configured with instructional funding)
     list_splits - retrieves a list of instructional funding allocations (as ChargeSplit objects) associated with a specific merchant account.
+### Object `payarc.user_settings`
+#### Object `payarc.user_settings` is used to manage the webhooks and Callback URLs. This object has following functions: 
+    create - this function will create object stored in the database for webhooks in form of key value pair.
+    update - this function allows you to modify attributes of user settings object.
+    list - this function allows you to search amongst user settings you had created.
+    delete - this function allows you to delete user settings object.
 ### Object `payarc.batches`
 #### Object `payarc.batches` is used to manipulate batch reporting in the system. This object has following functions: 
     list - returns an object with attribute 'batches' a list of json object holding information for batches
@@ -503,6 +509,83 @@ async def refund_charge(id, options=None):
         
  asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
 ```
+## Managing Webhooks on Agent Level
+#### Webhooks management is available for agents only. To use this functionality you need to provide agent token on the constructor of the SDK.
+#### There are 4 type of webhooks that could be created:
+- `merchant.onboarded.webhook`
+- `lead.updated.webhook`
+- `lead.category.updated.webhook`
+- `lead.underwriting.updated.webhook`
+### Example: Create Webhook
+This example demonstrates how to create a webhook:
+```python
+async def create_webhook_example():
+    webhook_data = {
+        # 'key': 'merchant.onboarded.webhook',
+        'key': 'lead.category.updated.webhook',
+        'value': 12,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['create'](webhook_data)
+        print('Webhook created:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(create_webhook_example())
+```
+
+### Example: List Webhooks
+This example demonstrates how to list all webhooks:
+```python
+async def list_webhooks_example():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        print('Webhooks:')
+        pprint.pprint(webhooks, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_webhooks_example())
+```
+### Example: Update Webhook
+This example demonstrates how to update a webhook:
+```python
+async def update_webhook_example():
+    webhook_data = {
+        'key': 'merchant.onboarded.webhook',
+        'value': 1,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['update'](webhook_data)
+        print('Webhook updated:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(update_webhook_example())
+```
+This example demonstrates how to update a webhook by object:
+```python
+async def update_webhook_example_by_obj():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        webhook = webhooks['webhooks'][1] if webhooks['webhooks'] else None
+        if webhook:
+            webhook['value'] = 13
+            updated_webhook = await webhook['update']()
+            print('Webhook updated:', updated_webhook)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(update_webhook_by_obj_example())
+```
+### Example: Delete Webhook
+This example demonstrates how to delete a webhook:
+```python
+async def delete_webhook_example():
+    try:
+        response = await payarc.user_settings['agent']['webhooks']['delete']('merchant.onboarded.webhook')
+        print('Webhook deleted:', response)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(delete_webhook_example())
+```
+
 ## Managing Batches
 #### Batch reporting is available for agents only. To use this functionality you need to provide agent token on the constructor of the SDK.
 ### Example: List Batches with No Constraints
