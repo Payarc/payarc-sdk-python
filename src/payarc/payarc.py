@@ -44,6 +44,13 @@ class Payarc:
             'adjust_splits': self.__adjust_charge_splits,
             'list_splits': self.__list_charge_splits
         }
+        self.payees = {
+            'create': self.__create_payee,
+            'status': self.__lead_status,
+            'retrieve': self.__retrieve_applicant,
+            'list': self.__list_payees,
+            'delete': self.__delete_payee,
+        }
         self.batches = {
             # 'list': self.__list_batches, TODO: implement
             # 'retrieve': self.__get_batch, TODO: implement
@@ -328,6 +335,83 @@ class Payarc:
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API List Charge Splits'}, str(error)))
 
+    async def __create_payee(self, payee_data=None):
+        if payee_data is None:
+            payee_data = {}
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}agent-hub/apply/payees",
+                    json=payee_data,
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Create Payee'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create Payee'}, str(error)))
+        else:
+            return self.add_object_id(response.json().get('data'))
+
+    async def __list_payees(self, params=None):
+        if params is None:
+            params = {}
+        allowed_lead_status = {"underwriting", "approved", "pended", "declined"}
+        allowed_lead_type = {"payee", "not_payee"}
+        allowed_include = {"appData"}
+        if 'leadStatus' in params and params['leadStatus'] not in allowed_lead_status:
+            params.pop('leadStatus')
+        if 'leadType' in params and params['leadType'] not in allowed_lead_type:
+            params.pop('leadType')
+        if 'include' in params and params['include'] not in allowed_include:
+            params.pop('include')
+        try:
+            async with httpx.AsyncClient(timeout=60.00) as client:
+                response = await client.get(
+                    f"{self.base_url}agent-hub/apply/payees",
+                    params=params,
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+                response_data = response.json()
+                if isinstance(response_data, list):
+                    payees = [self.add_object_id(payee) for payee in response_data]
+                elif isinstance(response_data, dict):
+                    payees = [self.add_object_id(payee) for payee in response_data.get('data', [])]
+                else:
+                    payees = []
+                return {'payees': payees}
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API List Payees'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API List Payees'}, str(error)))
+
+    async def __delete_payee(self, payee):
+        if isinstance(payee, dict):
+            applicant_id = payee.get('object_id', payee)
+        else:
+            applicant_id = payee
+        try:
+            if applicant_id.startswith('appl_'):
+                applicant_id = applicant_id[5:]
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    "DELETE",
+                    f"{self.base_url}agent-hub/apply/payees/{applicant_id}",
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                if response.status_code == 204:
+                    return {}
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Delete Payee'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Delete Payee'}, str(error)))
+
     async def __refund_ach_charge(self, charge, params=None):
         if params is None:
             params = {}
@@ -440,7 +524,7 @@ class Payarc:
                     f"{self.base_url}my-user-settings",
                     json={'key': webhook_id},
                     headers=self.request_headers(self.bearer_token_agent)
-                                                )
+                )
                 if response.status_code == 204:
                     return {}
                 response.raise_for_status()
@@ -705,7 +789,7 @@ class Payarc:
             if applicant_id.startswith('appl_'):
                 applicant_id = applicant_id[5:]
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=60.00) as client:
                 response = await client.get(
                     f"{self.base_url}agent-hub/apply-apps/{applicant_id}",
                     headers=self.request_headers(self.bearer_token_agent),

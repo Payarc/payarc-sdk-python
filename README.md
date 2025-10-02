@@ -112,7 +112,14 @@ SDK is build around object payarc. From this object you can access properties an
     add_document - this function is adding base64 encoded document to existing candidate merchant. For different types of document required in the process contact Payarc. See examples how the function could be invoked
     delete_document - this function removes document, when document is no longer valid.
     submit - this function initialize the process of sing off contract between Payarc and your client
-
+### Object `payarc.payees`
+This API is specifically designed for Payfac (Payment Facilitator) operations. It focuses on the merchant onboarding process within a Payfac model, where multiple sub-merchants are managed under a single master merchant account.
+#### This object has following functions:
+    create - this function will create object stored in the database for a payee. it will provide identifier unique for each in order to identify and inquiry details. See examples and docs for more information
+    status - this function returns status of the payee. It is possible to check if it is in Submitted, Approved, Declined, Draft or other status.
+    list - this function allows you to search amongst payees you had created. It is possible to search based on some criteria. See examples and documentation for more details  
+    retrieve - this function extract details for specific payee from database.
+    delete - this function allows you to delete payee object.
 ### Object `payarc.billing`
 This object is aggregating other objects responsible for recurrent payments. Nowadays they are `plan` and `subscription`.
 
@@ -1030,6 +1037,100 @@ async def submit_application():
 asyncio.run(submit_application())
 ```
 
+## Manage Payees
+### Create Payee
+To create a payee use function `create` of object `payees`. Here is an example
+```python
+async def add_payee():
+    body_params = {
+        "type": "sole_prop",
+        "personal_info": {
+            "first_name": "Test Name",
+            "last_name": "Test Lastname",
+            "ssn": "334567234",
+            "dob": "2001-10-02"
+        },
+        "business_info": {
+            "legal_name": "Example LLC",
+            "ein": "##-#######",
+            "irs_filing_type": "\"A\""
+            # "A" - Foreign Entity Verification Pending
+            # "B" - "Foreign Entity Identified before 1/1/11"
+            # "C" - "Non Profit Verified"
+            # "D" - "Non Profit Verification Pending"
+            # "F" - "Foreign Entity Verified"
+            # "G" - "Government Entity"
+            # "J" - "Financial Institution"
+            # "N" - "Not Excluded"
+        },
+        "contact_info": {
+            "email": "example.com",
+            "phone_number": "5566778843"
+        },
+        "address_info": {
+            "street": "OPulchenska 10",
+            "city": "Example City",
+            "zip_code": "22334",
+            "county_code": "NY"
+        },
+        "banking_info": {
+            "dda": "123456789",
+            "routing": "987654321"
+        },
+        "foundation_date": "2025-10-02",
+        "date_incorporated": "2025-10-02"
+    }
+    try:
+        payee = await payarc.payees['create'](body_params)
+        print('Payee created:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(add_payee())
+```
+### Retrieve Payee
+To retrieve details for existing payee use function `retrieve` of object `payees`. Here is an example
+```python
+async def get_payee_by_id(id):
+    try:
+        payee = await payarc.payees['retrieve'](id)
+        print('Payee retrieved:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(get_payee_by_id('appl_3aln*******8y8'))
+```
+### List all Payees
+To list all payees use function `list` of object `payees`. Here is an example
+```python
+async def list_all_payees():
+    try:
+        payees = await payarc.payees['list']()
+        print('Payees:', payees)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_all_payees())
+```
+### Status of Payee
+To check status of existing payee use function `status` of object `payees`. Here is an example
+```python
+async def check_payee_status(id):
+    try:
+        payee = await payarc.payees['status'](id)
+        print('Payee status:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(check_payee_status('appl_3aln*******8y8'))
+```
+### Delete Payee
+To delete existing payee use function `delete` of object `payees`. Here is an example
+```python
+async def delete_payee_by_id(id):
+    try:
+        payee = await payarc.payees['delete'](id)
+        print('Payee deleted:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(delete_payee_by_id('appl_3aln*******8y8'))
+```
 ## Split Payment
 
 As ISV you can create campaigns to manage financial details around your processing merchants. In the SDK the object representing this functionality is `split_campaigns` this object has functions to create. list, update campaigns. Here below are examples related to manipulation of campaign.
