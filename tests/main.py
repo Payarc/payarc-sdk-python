@@ -217,6 +217,59 @@ async def refund_ach_charge_by_obj(id, options=None):
         print('Error detected:', error)
 
 
+async def create_webhook_example():
+    webhook_data = {
+        # 'key': 'merchant.onboarded.webhook',
+        'key': 'lead.category.updated.webhook',
+        'value': 12,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['create'](webhook_data)
+        print('Webhook created:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_webhook_example():
+    webhook_data = {
+        'key': 'merchant.onboarded.webhook',
+        'value': 1,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['update'](webhook_data)
+        print('Webhook updated:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def update_webhook_example_by_obj():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        webhook = webhooks['webhooks'][1] if webhooks['webhooks'] else None
+        if webhook:
+            webhook['value'] = 13
+            updated_webhook = await webhook['update']()
+            print('Webhook updated:', updated_webhook)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def list_webhooks_example():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        print('Webhooks list:', webhooks)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def delete_webhook_example():
+    try:
+        response = await payarc.user_settings['agent']['webhooks']['delete']('merchant.onboarded.webhook')
+        print('Webhook deleted:', response)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def create_customer_example():
     customer_data = {
         "email": "anon+50@example.com",
@@ -776,6 +829,71 @@ async def submit_case():
         print('Error detected:', error)
 
 
+async def add_payee():
+    body_params = {
+        "type": "sole_prop",
+        "personal_info": {
+            "first_name": "Pesho",
+            "last_name": "Taligata",
+            "ssn": "334567234",
+            "dob": "2001-10-02"
+        },
+        "business_info": {
+            "legal_name": "Taligi LLC",
+            "ein": "##-#######",
+            "irs_filing_type": "\"A\""
+            # "A" - Foreign Entity Verification Pending
+            # "B" - "Foreign Entity Identified before 1/1/11"
+            # "C" - "Non Profit Verified"
+            # "D" - "Non Profit Verification Pending"
+            # "F" - "Foreign Entity Verified"
+            # "G" - "Government Entity"
+            # "J" - "Financial Institution"
+            # "N" - "Not Excluded"
+        },
+        "contact_info": {
+            "email": "taliga@dedov.com",
+            "phone_number": "5566778843"
+        },
+        "address_info": {
+            "street": "OPulchenska 10",
+            "city": "Maina Town",
+            "zip_code": "22334",
+            "county_code": "NY"
+        },
+        "banking_info": {
+            "dda": "123456789",
+            "routing": "987654321"
+        },
+        "foundation_date": "2025-10-02",
+        "date_incorporated": "2025-10-02"
+    }
+    try:
+        payee = await payarc.payees['create'](body_params)
+        print('Payee created:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def list_payees():
+    try:
+        params = {
+            'include': 'appData'
+        }
+        payees = await payarc.payees['list'](params)
+        print('Payees:', payees)
+    except Exception as error:
+        print('Error detected:', error)
+
+
+async def delete_payee_by_id(id):
+    try:
+        response = await payarc.payees['delete'](id)
+        print('Payee deleted:', response)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 # Run the example
 if __name__ == "__main__":
     # asyncio.run(create_charge_example())
@@ -783,7 +901,12 @@ if __name__ == "__main__":
     # asyncio.run(adjust_splits_by_charge_id('ch_WBMROoBWnnnDbOyn'))
     # asyncio.run(adjust_splits_by_charge_obj())
     # asyncio.run(list_charge_splits({'limit': 25, 'page': 2}))
-    asyncio.run(create_charge_split())
+    # asyncio.run(create_webhook_example())
+    # asyncio.run(update_webhook_example())
+    # asyncio.run(update_webhook_example_by_obj())
+    # asyncio.run(list_webhooks_example())
+    # asyncio.run(delete_webhook_example())
+     asyncio.run(create_charge_split())
     # asyncio.run(list_charges({'limit': 50, 'page': 1}))
     # asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
     # asyncio.run(get_charge_by_id('ch_WBMROoBWnnnDbOyn'))
@@ -805,10 +928,14 @@ if __name__ == "__main__":
     # asyncio.run(create_charge_by_customer_id())
     # asyncio.run(create_charge_by_bank_account())
     # asyncio.run(create_ach_charge_by_bank_account_details())
+    # asyncio.run(add_payee())
+    # asyncio.run(list_payees())
+    asyncio.run(delete_payee_by_id('appl_dpokzgdmz5g50ml8'))
     # asyncio.run(create_candidate_merchant())
     # asyncio.run(list_applications())
     # asyncio.run(get_candiate_merchant_by_id('appl_9d6woe30xye3jz0q'))
-    # asyncio.run(get_lead_status('appl_jq0vmgzpq5ela96w'))
+    asyncio.run(get_candiate_merchant_by_id('appl_xmylbgq5r9gv98ra'))
+    asyncio.run(get_lead_status('appl_xmylbgq5r9gv98ra'))
     # asyncio.run(create_candidate_in_behalf_of_other_agent())
     # asyncio.run(list_inc_documents())
     # asyncio.run(update_candidate_merchant('appl_3alndgy6xoep49y8'))

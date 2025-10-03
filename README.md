@@ -81,6 +81,12 @@ SDK is build around object payarc. From this object you can access properties an
     create_refund - function to perform a refund over existing charge
     adjust_splits - function to modify splits for existing charge (Only for Merchants configured with instructional funding)
     list_splits - retrieves a list of instructional funding allocations (as ChargeSplit objects) associated with a specific merchant account.
+### Object `payarc.user_settings`
+#### Object `payarc.user_settings` is used to manage the webhooks and Callback URLs. This object has following functions: 
+    create - this function will create object stored in the database for webhooks in form of key value pair.
+    update - this function allows you to modify attributes of user settings object.
+    list - this function allows you to search amongst user settings you had created.
+    delete - this function allows you to delete user settings object.
 ### Object `payarc.batches`
 #### Object `payarc.batches` is used to manipulate batch reporting in the system. This object has following functions: 
     list - returns an object with attribute 'batches' a list of json object holding information for batches
@@ -106,7 +112,14 @@ SDK is build around object payarc. From this object you can access properties an
     add_document - this function is adding base64 encoded document to existing candidate merchant. For different types of document required in the process contact Payarc. See examples how the function could be invoked
     delete_document - this function removes document, when document is no longer valid.
     submit - this function initialize the process of sing off contract between Payarc and your client
-
+### Object `payarc.payees`
+This API is specifically designed for Payfac (Payment Facilitator) operations. It focuses on the merchant onboarding process within a Payfac model, where multiple sub-merchants are managed under a single master merchant account.
+#### This object has following functions:
+    create - this function will create object stored in the database for a payee. it will provide identifier unique for each in order to identify and inquiry details. See examples and docs for more information
+    status - this function returns status of the payee. It is possible to check if it is in Submitted, Approved, Declined, Draft or other status.
+    list - this function allows you to search amongst payees you had created. It is possible to search based on some criteria. See examples and documentation for more details  
+    retrieve - this function extract details for specific payee from database.
+    delete - this function allows you to delete payee object.
 ### Object `payarc.billing`
 This object is aggregating other objects responsible for recurrent payments. Nowadays they are `plan` and `subscription`.
 
@@ -524,6 +537,83 @@ async def refund_charge(id, options=None):
         
  asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
 ```
+## Managing Webhooks on Agent Level
+#### Webhooks management is available for agents only. To use this functionality you need to provide agent token on the constructor of the SDK.
+#### There are 4 type of webhooks that could be created:
+- `merchant.onboarded.webhook`
+- `lead.updated.webhook`
+- `lead.category.updated.webhook`
+- `lead.underwriting.updated.webhook`
+### Example: Create Webhook
+This example demonstrates how to create a webhook:
+```python
+async def create_webhook_example():
+    webhook_data = {
+        # 'key': 'merchant.onboarded.webhook',
+        'key': 'lead.category.updated.webhook',
+        'value': 12,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['create'](webhook_data)
+        print('Webhook created:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(create_webhook_example())
+```
+
+### Example: List Webhooks
+This example demonstrates how to list all webhooks:
+```python
+async def list_webhooks_example():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        print('Webhooks:')
+        pprint.pprint(webhooks, width=120, compact=True)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_webhooks_example())
+```
+### Example: Update Webhook
+This example demonstrates how to update a webhook:
+```python
+async def update_webhook_example():
+    webhook_data = {
+        'key': 'merchant.onboarded.webhook',
+        'value': 1,
+    }
+    try:
+        webhook = await payarc.user_settings['agent']['webhooks']['update'](webhook_data)
+        print('Webhook updated:', webhook)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(update_webhook_example())
+```
+This example demonstrates how to update a webhook by object:
+```python
+async def update_webhook_example_by_obj():
+    try:
+        webhooks = await payarc.user_settings['agent']['webhooks']['list']()
+        webhook = webhooks['webhooks'][1] if webhooks['webhooks'] else None
+        if webhook:
+            webhook['value'] = 13
+            updated_webhook = await webhook['update']()
+            print('Webhook updated:', updated_webhook)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(update_webhook_by_obj_example())
+```
+### Example: Delete Webhook
+This example demonstrates how to delete a webhook:
+```python
+async def delete_webhook_example():
+    try:
+        response = await payarc.user_settings['agent']['webhooks']['delete']('merchant.onboarded.webhook')
+        print('Webhook deleted:', response)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(delete_webhook_example())
+```
+
 ## Managing Batches
 #### Batch reporting is available for agents only. To use this functionality you need to provide agent token on the constructor of the SDK.
 ### Example: List Batches with No Constraints
@@ -968,6 +1058,100 @@ async def submit_application():
 asyncio.run(submit_application())
 ```
 
+## Manage Payees
+### Create Payee
+To create a payee use function `create` of object `payees`. Here is an example
+```python
+async def add_payee():
+    body_params = {
+        "type": "sole_prop",
+        "personal_info": {
+            "first_name": "Test Name",
+            "last_name": "Test Lastname",
+            "ssn": "334567234",
+            "dob": "2001-10-02"
+        },
+        "business_info": {
+            "legal_name": "Example LLC",
+            "ein": "##-#######",
+            "irs_filing_type": "\"A\""
+            # "A" - Foreign Entity Verification Pending
+            # "B" - "Foreign Entity Identified before 1/1/11"
+            # "C" - "Non Profit Verified"
+            # "D" - "Non Profit Verification Pending"
+            # "F" - "Foreign Entity Verified"
+            # "G" - "Government Entity"
+            # "J" - "Financial Institution"
+            # "N" - "Not Excluded"
+        },
+        "contact_info": {
+            "email": "example.com",
+            "phone_number": "5566778843"
+        },
+        "address_info": {
+            "street": "OPulchenska 10",
+            "city": "Example City",
+            "zip_code": "22334",
+            "county_code": "NY"
+        },
+        "banking_info": {
+            "dda": "123456789",
+            "routing": "987654321"
+        },
+        "foundation_date": "2025-10-02",
+        "date_incorporated": "2025-10-02"
+    }
+    try:
+        payee = await payarc.payees['create'](body_params)
+        print('Payee created:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(add_payee())
+```
+### Retrieve Payee
+To retrieve details for existing payee use function `retrieve` of object `payees`. Here is an example
+```python
+async def get_payee_by_id(id):
+    try:
+        payee = await payarc.payees['retrieve'](id)
+        print('Payee retrieved:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(get_payee_by_id('appl_3aln*******8y8'))
+```
+### List all Payees
+To list all payees use function `list` of object `payees`. Here is an example
+```python
+async def list_all_payees():
+    try:
+        payees = await payarc.payees['list']()
+        print('Payees:', payees)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(list_all_payees())
+```
+### Status of Payee
+To check status of existing payee use function `status` of object `payees`. Here is an example
+```python
+async def check_payee_status(id):
+    try:
+        payee = await payarc.payees['status'](id)
+        print('Payee status:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(check_payee_status('appl_3aln*******8y8'))
+```
+### Delete Payee
+To delete existing payee use function `delete` of object `payees`. Here is an example
+```python
+async def delete_payee_by_id(id):
+    try:
+        payee = await payarc.payees['delete'](id)
+        print('Payee deleted:', payee)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(delete_payee_by_id('appl_3aln*******8y8'))
+```
 ## Split Payment
 
 As ISV you can create campaigns to manage financial details around your processing merchants. In the SDK the object representing this functionality is `split_campaigns` this object has functions to create. list, update campaigns. Here below are examples related to manipulation of campaign.

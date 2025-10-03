@@ -45,12 +45,29 @@ class Payarc:
             'list_splits': self.__list_charge_splits,
             'create_split': self.__create_split,
         }
+        self.payees = {
+            'create': self.__create_payee,
+            'status': self.__lead_status,
+            'retrieve': self.__retrieve_applicant,
+            'list': self.__list_payees,
+            'delete': self.__delete_payee,
+        }
         self.batches = {
             # 'list': self.__list_batches, TODO: implement
             # 'retrieve': self.__get_batch, TODO: implement
             'agent': {
                 'list': self.__list_agent_batches,
                 'details': self.__get_agent_batch_details
+            }
+        }
+        self.user_settings = {
+            'agent': {
+                'webhooks': {
+                    'create': self.__create_webhook,
+                    'list': self.__list_webhooks,
+                    'update': self.__update_webhook,
+                    'delete': self.__delete_webhook
+                }
             }
         }
         self.customers = {
@@ -343,6 +360,83 @@ class Payarc:
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API Create Split'}, str(error)))
 
+    async def __create_payee(self, payee_data=None):
+        if payee_data is None:
+            payee_data = {}
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}agent-hub/apply/payees",
+                    json=payee_data,
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Create Payee'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create Payee'}, str(error)))
+        else:
+            return self.add_object_id(response.json().get('data'))
+
+    async def __list_payees(self, params=None):
+        if params is None:
+            params = {}
+        allowed_lead_status = {"underwriting", "approved", "pended", "declined"}
+        allowed_lead_type = {"payee", "not_payee"}
+        allowed_include = {"appData"}
+        if 'leadStatus' in params and params['leadStatus'] not in allowed_lead_status:
+            params.pop('leadStatus')
+        if 'leadType' in params and params['leadType'] not in allowed_lead_type:
+            params.pop('leadType')
+        if 'include' in params and params['include'] not in allowed_include:
+            params.pop('include')
+        try:
+            async with httpx.AsyncClient(timeout=60.00) as client:
+                response = await client.get(
+                    f"{self.base_url}agent-hub/apply/payees",
+                    params=params,
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+                response_data = response.json()
+                if isinstance(response_data, list):
+                    payees = [self.add_object_id(payee) for payee in response_data]
+                elif isinstance(response_data, dict):
+                    payees = [self.add_object_id(payee) for payee in response_data.get('data', [])]
+                else:
+                    payees = []
+                return {'payees': payees}
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API List Payees'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API List Payees'}, str(error)))
+
+    async def __delete_payee(self, payee):
+        if isinstance(payee, dict):
+            applicant_id = payee.get('object_id', payee)
+        else:
+            applicant_id = payee
+        try:
+            if applicant_id.startswith('appl_'):
+                applicant_id = applicant_id[5:]
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    "DELETE",
+                    f"{self.base_url}agent-hub/apply/payees/{applicant_id}",
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                if response.status_code == 204:
+                    return {}
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Delete Payee'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Delete Payee'}, str(error)))
+
     async def __refund_ach_charge(self, charge, params=None):
         if params is None:
             params = {}
@@ -380,6 +474,91 @@ class Payarc:
             raise Exception(self.manage_error({'source': 'API Refund ACH Charge'}, str(error)))
         else:
             return self.add_object_id(response.json().get('data'))
+
+    async def __create_webhook(self, webhook_data=None):
+        if webhook_data is None:
+            webhook_data = {
+            }
+        webhook_data['key'] = webhook_data.get('key', '')
+        webhook_data['value'] = webhook_data.get('value', '')
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}my-user-settings",
+                    json=webhook_data,
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Create webhook'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create webhook'}, str(error)))
+        else:
+            return self.add_object_id(response.json().get('data'))
+
+    async def __update_webhook(self, webhook_data=None):
+        data = {}
+        if webhook_data is None:
+            webhook_data = {
+            }
+        data['key'] = webhook_data.get('key', '')
+        data['value'] = webhook_data.get('value', '')
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}my-user-settings",
+                    json=data,
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Update webhook'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Update webhook'}, str(error)))
+        else:
+            return self.add_object_id(response.json().get('data'))
+
+    async def __list_webhooks(self):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}my-user-settings",
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                response.raise_for_status()
+                response_data = response.json()
+                webhooks = [self.add_object_id(webhook) for webhook in response_data.get('data', [])]
+                return {'webhooks': webhooks}
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API List webhooks'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API List webhooks'}, str(error)))
+
+    async def __delete_webhook(self, webhook):
+        if isinstance(webhook, dict):
+            webhook_id = webhook.get('key', webhook)
+        else:
+            webhook_id = webhook
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    'DELETE',
+                    f"{self.base_url}my-user-settings",
+                    json={'key': webhook_id},
+                    headers=self.request_headers(self.bearer_token_agent)
+                )
+                if response.status_code == 204:
+                    return {}
+                response.raise_for_status()
+                return self.add_object_id(response.json().get('data', {}))
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Delete webhook'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Delete webhook'}, str(error)))
 
     async def __create_customer(self, customer_data=None):
         if customer_data is None:
@@ -635,7 +814,7 @@ class Payarc:
             if applicant_id.startswith('appl_'):
                 applicant_id = applicant_id[5:]
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=60.00) as client:
                 response = await client.get(
                     f"{self.base_url}agent-hub/apply-apps/{applicant_id}",
                     headers=self.request_headers(self.bearer_token_agent),
@@ -1572,6 +1751,9 @@ class Payarc:
                     obj['create_refund'] = partial(self.__refund_charge, obj)
                     if obj.get('splits') and obj['splits'].get('data'):
                         obj['adjust_splits'] = partial(self.__adjust_charge_splits, obj)
+                elif obj.get('object') == 'UserSetting':
+                    obj['object_id'] = f"usr_{obj['id']}"
+                    obj['update'] = partial(self.__update_webhook, obj)
                 elif obj.get('object') == 'customer':
                     obj['object_id'] = f"cus_{obj['customer_id']}"
                     obj['update'] = partial(self.__update_customer, obj)
