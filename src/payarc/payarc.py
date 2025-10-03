@@ -42,7 +42,8 @@ class Payarc:
             },
             'create_refund': self.__refund_charge,
             'adjust_splits': self.__adjust_charge_splits,
-            'list_splits': self.__list_charge_splits
+            'list_splits': self.__list_charge_splits,
+            'create_instructional_funding': self.__create_split,
         }
         self.payees = {
             'create': self.__create_payee,
@@ -334,6 +335,33 @@ class Payarc:
                                               error.response if error.response else {}))
         except Exception as error:
             raise Exception(self.manage_error({'source': 'API List Charge Splits'}, str(error)))
+        
+    async def __create_split(self, split_data=None):
+        if split_data is None:
+            split_data = {}
+        mid = split_data.get("mid")
+        amount = split_data.get("amount")
+        description = split_data.get("description")
+        include = split_data.get("include", "charge")
+        charge_id = split_data.get("charge_id", "")
+        if charge_id.startswith('ch_'):
+            charge_id = charge_id[3:]
+        data = {"charge_id": charge_id, "mid": mid, "amount": amount, "description": description}
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}instructional_funding",
+                    json=data,
+                    headers=self.request_headers(self.bearer_token),
+                    params={"include": include}
+                )
+                response.raise_for_status()
+                return self.add_object_id(response.json().get('data'))
+        except httpx.HTTPError as error:
+            raise Exception(self.manage_error({'source': 'API Create Split'},
+                                              error.response if error.response else {}))
+        except Exception as error:
+            raise Exception(self.manage_error({'source': 'API Create Split'}, str(error)))
 
     async def __create_payee(self, payee_data=None):
         if payee_data is None:

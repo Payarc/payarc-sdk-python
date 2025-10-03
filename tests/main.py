@@ -140,6 +140,21 @@ async def list_charge_splits(params=None):
         print('Error detected:', error)
 
 
+async def create_charge_split():
+    split_data = {
+        "mid": "0709900000109900",
+        "amount": 120,
+        "description": "Application fee created",
+        # "include": "charge",
+        # "charge_id": "ch_WBMROoBWnnnDbOyn"
+    }
+    try:
+        split = await payarc.charges['create_instructional_funding'](split_data)
+        print('Success, the new split is:', split)
+    except Exception as error:
+        print('Error detected:', error)
+
+
 async def adjust_splits_by_charge_obj():
     try:
         charge = await payarc.charges['retrieve']('ch_WBMROoBWnnnDbOyn')
@@ -894,69 +909,70 @@ if __name__ == "__main__":
     # asyncio.run(update_webhook_example_by_obj())
     # asyncio.run(list_webhooks_example())
     # asyncio.run(delete_webhook_example())
-    # asyncio.run(list_charges({'limit': 50, 'page': 1}))
-    # asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
-    # asyncio.run(get_charge_by_id('ch_WBMROoBWnnnDbOyn'))
-    # asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
-    # asyncio.run(refund_ach_charge_by_obj('ach_g9dDE7GDdeDG08eA', {}))
-    # asyncio.run(refund_charge_by_obj('ch_MnBROWLXBBXnoOWL',
-    #                                  {'reason': 'requested_by_customer',
-    #                                   'description': 'The customer returned the product, did not like it'}))
-    # asyncio.run(create_customer_example())
-    # asyncio.run(get_customer_by_id('cus_jMNKVMPKnNxPVnDp'))
-    # asyncio.run(update_customer('cus_DPNMVjx4AMNNVnjA'))
-    # asyncio.run(update_customer_by_obj('cus_DPNMVjx4AMNNVnjA'))
-    # asyncio.run(list_customer_with_limit(3))
-    # asyncio.run(delete_customer_by_id('cus_xPpAV4DNjnpKVNjK'))
-    # asyncio.run(add_card_to_customer())
-    # asyncio.run(add_bank_account_to_customer())
-    # asyncio.run(create_charge_by_card_id())
-    # asyncio.run(create_charge_by_token())
-    # asyncio.run(create_charge_by_customer_id())
-    # asyncio.run(create_charge_by_bank_account())
-    # asyncio.run(create_ach_charge_by_bank_account_details())
-    # asyncio.run(add_payee())
-    # asyncio.run(list_payees())
-    asyncio.run(delete_payee_by_id('appl_dpokzgdmz5g50ml8'))
-    # asyncio.run(create_candidate_merchant())
-    # asyncio.run(list_applications())
-    # asyncio.run(get_candiate_merchant_by_id('appl_9d6woe30xye3jz0q'))
-    asyncio.run(get_candiate_merchant_by_id('appl_xmylbgq5r9gv98ra'))
-    asyncio.run(get_lead_status('appl_xmylbgq5r9gv98ra'))
-    # asyncio.run(create_candidate_in_behalf_of_other_agent())
-    # asyncio.run(list_inc_documents())
-    # asyncio.run(update_candidate_merchant('appl_3alndgy6xoep49y8'))
-    # asyncio.run(add_document_to_candidate_merchant('appl_3alndgy6xoep49y8'))
-    # asyncio.run(remove_document_from_candidate_merchant())
-    # asyncio.run(remove_document_by_id())
-    # asyncio.run(create_plan())
-    # asyncio.run(update_plan())
-    # asyncio.run(delete_plan("plan_0d640ccc"))
-    # asyncio.run(create_subscription())
-    # asyncio.run(list_subscription())
-    # asyncio.run(update_subscription())
-    # asyncio.run(list_campaign())
-    # asyncio.run(list_all_processing_merchants())
-    # asyncio.run(create_campaign())
-    # asyncio.run(get_campaign_by_id('cmp_o3**********86n5'))
-    # asyncio.run(update_campaign())
-    # asyncio.run(list_cases())
-    # asyncio.run(list_agent_deposits({
-    #     'from_date': '2024-11-01',
-    #     'to_date': '2024-11-04'
-    # }))
-    # asyncio.run(list_agent_batches({
-    #     'from_date': '2025-05-30',
-    #     'to_date': '2025-05-30'
-    # }))
-    # asyncio.run(get_batch_details({
-    #     # 'batch_reference_number': 'bat_90042693274',
-    #     'mid': '0671900000038430',
-    #     'batch_date': '2025-05-30'
-    # }))
-    # asyncio.run(get_batch_details_by_obj({
-    #     'from_date': '2025-05-30',
-    #     'to_date': '2025-05-30'
-    # }))
-    # asyncio.run(get_case('dis_MVB1AV901Rb1VAW0'))
-    # asyncio.run(submit_case())
+    asyncio.run(create_charge_split())
+# asyncio.run(list_charges({'limit': 50, 'page': 1}))
+# asyncio.run(list_agent_charges({'from_date': '2025-05-27', 'to_date': '2025-05-28'}))
+# asyncio.run(get_charge_by_id('ch_WBMROoBWnnnDbOyn'))
+# asyncio.run(refund_charge('ach_g9dDE7GDdeDG08eA'))
+# asyncio.run(refund_ach_charge_by_obj('ach_g9dDE7GDdeDG08eA', {}))
+# asyncio.run(refund_charge_by_obj('ch_MnBROWLXBBXnoOWL',
+#                                  {'reason': 'requested_by_customer',
+#                                   'description': 'The customer returned the product, did not like it'}))
+# asyncio.run(create_customer_example())
+# asyncio.run(get_customer_by_id('cus_jMNKVMPKnNxPVnDp'))
+# asyncio.run(update_customer('cus_DPNMVjx4AMNNVnjA'))
+# asyncio.run(update_customer_by_obj('cus_DPNMVjx4AMNNVnjA'))
+# asyncio.run(list_customer_with_limit(3))
+# asyncio.run(delete_customer_by_id('cus_xPpAV4DNjnpKVNjK'))
+# asyncio.run(add_card_to_customer())
+# asyncio.run(add_bank_account_to_customer())
+# asyncio.run(create_charge_by_card_id())
+# asyncio.run(create_charge_by_token())
+# asyncio.run(create_charge_by_customer_id())
+# asyncio.run(create_charge_by_bank_account())
+# asyncio.run(create_ach_charge_by_bank_account_details())
+# asyncio.run(add_payee())
+# asyncio.run(list_payees())
+# asyncio.run(delete_payee_by_id('appl_dpokzgdmz5g50ml8'))
+# asyncio.run(create_candidate_merchant())
+# asyncio.run(list_applications())
+# asyncio.run(get_candiate_merchant_by_id('appl_9d6woe30xye3jz0q'))
+# asyncio.run(get_candiate_merchant_by_id('appl_xmylbgq5r9gv98ra'))
+# asyncio.run(get_lead_status('appl_xmylbgq5r9gv98ra'))
+# asyncio.run(create_candidate_in_behalf_of_other_agent())
+# asyncio.run(list_inc_documents())
+# asyncio.run(update_candidate_merchant('appl_3alndgy6xoep49y8'))
+# asyncio.run(add_document_to_candidate_merchant('appl_3alndgy6xoep49y8'))
+# asyncio.run(remove_document_from_candidate_merchant())
+# asyncio.run(remove_document_by_id())
+# asyncio.run(create_plan())
+# asyncio.run(update_plan())
+# asyncio.run(delete_plan("plan_0d640ccc"))
+# asyncio.run(create_subscription())
+# asyncio.run(list_subscription())
+# asyncio.run(update_subscription())
+# asyncio.run(list_campaign())
+# asyncio.run(list_all_processing_merchants())
+# asyncio.run(create_campaign())
+# asyncio.run(get_campaign_by_id('cmp_o3**********86n5'))
+# asyncio.run(update_campaign())
+# asyncio.run(list_cases())
+# asyncio.run(list_agent_deposits({
+#     'from_date': '2024-11-01',
+#     'to_date': '2024-11-04'
+# }))
+# asyncio.run(list_agent_batches({
+#     'from_date': '2025-05-30',
+#     'to_date': '2025-05-30'
+# }))
+# asyncio.run(get_batch_details({
+#     # 'batch_reference_number': 'bat_90042693274',
+#     'mid': '0671900000038430',
+#     'batch_date': '2025-05-30'
+# }))
+# asyncio.run(get_batch_details_by_obj({
+#     'from_date': '2025-05-30',
+#     'to_date': '2025-05-30'
+# }))
+# asyncio.run(get_case('dis_MVB1AV901Rb1VAW0'))
+# asyncio.run(submit_case())
