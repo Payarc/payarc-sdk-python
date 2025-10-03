@@ -43,7 +43,7 @@ class Payarc:
             'create_refund': self.__refund_charge,
             'adjust_splits': self.__adjust_charge_splits,
             'list_splits': self.__list_charge_splits,
-            'create_split': self.__create_split,
+            'create_instructional_funding': self.__create_split,
         }
         self.payees = {
             'create': self.__create_payee,
@@ -343,12 +343,15 @@ class Payarc:
         amount = split_data.get("amount")
         description = split_data.get("description")
         include = split_data.get("include", "charge")
-
+        charge_id = split_data.get("charge_id", "")
+        if charge_id.startswith('ch_'):
+            charge_id = charge_id[3:]
+        data = {"charge_id": charge_id, "mid": mid, "amount": amount, "description": description}
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.base_url}instructional_funding",
-                    json={"mid": mid, "amount": amount, "description": description},
+                    json=data,
                     headers=self.request_headers(self.bearer_token),
                     params={"include": include}
                 )

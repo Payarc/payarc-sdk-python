@@ -81,6 +81,7 @@ SDK is build around object payarc. From this object you can access properties an
     create_refund - function to perform a refund over existing charge
     adjust_splits - function to modify splits for existing charge (Only for Merchants configured with instructional funding)
     list_splits - retrieves a list of instructional funding allocations (as ChargeSplit objects) associated with a specific merchant account.
+    create_instructional_funding - function to transfer money to my payees via instructional funding
 ### Object `payarc.user_settings`
 #### Object `payarc.user_settings` is used to manage the webhooks and Callback URLs. This object has following functions: 
     create - this function will create object stored in the database for webhooks in form of key value pair.
@@ -376,6 +377,26 @@ async def adjust_splits_by_charge_obj(id):
     except Exception as error:
         print('Error detected:', error)
 asyncio.run(adjust_splits_by_charge_obj('ch_M*********noOWL'))
+```
+
+### Example: Create Instructional Funding
+This example demonstrates how to transfer money to my payees via instructional funding:
+
+```python
+async def create_instructional_funding():
+    split_data = {
+        "mid": "070990********6",
+        "amount": 30,
+        "description": "Application fee created",
+        # "include": "charge" // optional
+        # "charge_id": "ch_nbDB*******RnMORX" // optional
+    }
+    try:
+        split = await payarc.charges['create_instructional_funding'](split_data)
+        print('Success, the money transfer is:', split)
+    except Exception as error:
+        print('Error detected:', error)
+asyncio.run(create_instructional_funding())
 ```
 ## Listing Splits for Charge with Instructional Funding
 This example demonstrates how to list splits of instructional funding allocations (as ChargeSplit objects) associated with a specific merchant account.
