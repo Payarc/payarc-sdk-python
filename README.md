@@ -412,27 +412,6 @@ async def list_charge_splits(params=None):
 asyncio.run(list_charge_splits({'limit': 25, 'page': 2}))
 ```
 
-## Create Split Instructional Funding
-
-### Example: Create Instructional Funding
-
-This example demonstrates how to transfer money to my payees via instructional funding:
-
-```python
-async def create_split_example():
-    split_data = {
-        "mid": "0709900000098856",
-        "amount": 30,
-        "description": "Application fee created"
-    }
-    try:
-        split = await payarc.charges['create_split'](charge_data)
-        print('Success, the money transfer is:', split)
-    except Exception as error:
-        print('Error detected:', error)
-asyncio.run(create_split_example())
-```
-
 ## Listing Charges
 
 ### Example: List Charges with No Constraints
